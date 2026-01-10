@@ -1,0 +1,679 @@
+{% extends "base.html" %}
+
+{% block title %}我的餐桌 - 餐厅点餐平台{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>我的餐桌</h2>
+        <div>
+            <a href="{{ url_for('main.restaurants') }}" class="btn btn-outline-primary me-2">
+                <i class="bi bi-shop"></i> 继续点餐
+            </a>
+            <span class="badge bg-info fs-6">菜品数量: {{ cart_items|sum(attribute='quantity') }}</span>
+        </div>
+    </div>
+
+    {% if cart_items %}
+    <div class="row">
+        <!-- 左侧：菜品列表 -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">已点菜品</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th width="80">图片</th>
+                                    <th>菜品</th>
+                                    <th width="120">单价</th>
+                                    <th width="150">数量</th>
+                                    <th width="120">小计</th>
+                                    <th width="80">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cart_items %}
+                                <tr id="dish-row-{{ item.dish.id }}">
+                                    <td>
+                                        <img src="{{ url_for('static', filename='uploads/dishes/' + item.dish.image_path) }}" 
+                                             alt="{{ item.dish.name }}" 
+                                             class="img-fluid rounded" 
+                                             style="width: 60px; height: 60px; object-fit: cover;">
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-1">{{ item.dish.name }}</h6>
+                                        <small class="text-muted">{{ item.dish.category.name }}</small>
+                                    </td>
+                                    <td class="text-success">
+                                        ¥{{ "%.2f"|format(item.price) }}
+                                    </td>
+                                    <td>
+                                        <div class="input-group input-group-sm" style="width: 120px;">
+                                            <button class="btn btn-outline-secondary quantity-minus" 
+                                                    type="button"
+                                                    data-dish-id="{{ item.dish.id }}"
+                                                    data-current-quantity="{{ item.quantity }}">
+                                                <i class="bi bi-dash"></i>
+                                            </button>
+                                            <input type="text" 
+                                                   class="form-control text-center quantity-input" 
+                                                   value="{{ item.quantity }}"
+                                                   data-dish-id="{{ item.dish.id }}"
+                                                   readonly>
+                                            <button class="btn btn-outline-secondary quantity-plus" 
+                                                    type="button"
+                                                    data-dish-id="{{ item.dish.id }}"
+                                                    data-current-quantity="{{ item.quantity }}">
+                                                <i class="bi bi-plus"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="text-success fw-bold item-total" 
+                                        id="item-total-{{ item.dish.id }}">
+                                        ¥{{ "%.2f"|format(item.item_total) }}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-danger remove-item" 
+                                                data-dish-id="{{ item.dish.id }}"
+                                                data-dish-name="{{ item.dish.name }}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 继续点餐提示 -->
+            <div class="card mt-3">
+                <div class="card-body text-center">
+                    <h6>还想点其他菜品？</h6>
+                    <p class="text-muted small mb-3">您可以继续浏览餐厅，添加到餐桌的菜品会在这里显示</p>
+                    <a href="{{ url_for('main.restaurants') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-plus-circle"></i> 继续点餐
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧：订单汇总 -->
+        <div class="col-lg-4">
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">订单汇总</h5>
+                </div>
+                <div class="card-body">
+                    <!-- 菜品总计 -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>菜品数量</span>
+                            <span id="total-quantity">{{ cart_items|sum(attribute='quantity') }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>菜品总价</span>
+                            <span id="subtotal">¥{{ "%.2f"|format(total_price) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>配送费</span>
+                            <span>¥0.00</span>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="fw-bold">总计</span>
+                            <span class="text-success fw-bold fs-5" id="total-price">¥{{ "%.2f"|format(total_price) }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 支付方式（模拟） -->
+                    <div class="mb-4">
+                        <h6>支付方式</h6>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="paymentMethod" id="wechatPay" checked>
+                            <label class="form-check-label" for="wechatPay">
+                                <i class="bi bi-wechat text-success"></i> 微信支付
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="paymentMethod" id="alipay">
+                            <label class="form-check-label" for="alipay">
+                                <i class="bi bi-credit-card text-primary"></i> 支付宝
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="paymentMethod" id="cash">
+                            <label class="form-check-label" for="cash">
+                                <i class="bi bi-cash text-warning"></i> 现金支付
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- 备注 -->
+                    <div class="mb-4">
+                        <label for="order-remarks" class="form-label">订单备注（选填）</label>
+                        <textarea class="form-control" id="order-remarks" rows="2" 
+                                  placeholder="例如：少辣、不要葱、特殊要求等"></textarea>
+                    </div>
+                    
+                    <!-- 结算按钮 -->
+                    <div class="d-grid">
+                        <button class="btn btn-success btn-lg checkout-btn" {% if not cart_items %}disabled{% endif %}>
+                            <i class="bi bi-credit-card"></i> 立即支付 ¥{{ "%.2f"|format(total_price) }}
+                        </button>
+                    </div>
+                    
+                    <div class="text-center mt-3">
+                        <small class="text-muted">点击"立即支付"即表示您同意我们的服务条款</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 温馨提示 -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6><i class="bi bi-info-circle text-primary"></i> 温馨提示</h6>
+                    <ul class="small text-muted mb-0">
+                        <li>支付成功后订单将发送到餐厅</li>
+                        <li>菜品数量可随时调整</li>
+                        <li>如有特殊要求请在备注中说明</li>
+                        <li>如需帮助请联系餐厅客服</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- 空购物车状态 -->
+    <div class="text-center py-5">
+        <i class="bi bi-table display-1 text-muted"></i>
+        <h3 class="mt-3">餐桌空空如也</h3>
+        <p class="text-muted mb-4">您还没有添加任何菜品到餐桌</p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{{ url_for('main.restaurants') }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-shop"></i> 去点餐
+            </a>
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary btn-lg">
+                <i class="bi bi-house"></i> 返回首页
+            </a>
+        </div>
+        
+        <!-- 推荐餐厅 -->
+        <div class="mt-5">
+            <h5>热门餐厅推荐</h5>
+            <div class="row mt-3">
+                <div class="col-md-6 offset-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i class="bi bi-egg-fried display-4 text-warning"></i>
+                            <h6 class="mt-3">发现美食</h6>
+                            <p class="text-muted small">多家餐厅等你探索，各种美食等你品尝</p>
+                            <a href="{{ url_for('main.restaurants') }}" class="btn btn-outline-primary">
+                                浏览餐厅
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 付款确认模态框 -->
+<div class="modal fade" id="checkoutModal" tabindex="-1" aria-labelledby="checkoutModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="checkoutModalLabel">确认付款</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <i class="bi bi-credit-card display-4 text-success"></i>
+                </div>
+                
+                <div class="mb-4">
+                    <h6>订单详情：</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tbody id="checkout-items-list">
+                                <!-- 订单项将通过JavaScript动态添加 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <span>菜品数量：</span>
+                    <span id="checkout-quantity">0</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span>订单总价：</span>
+                    <span class="text-success fw-bold" id="checkout-total">¥0.00</span>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    点击确认后，订单将提交到餐厅，并扣除相应金额。
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-success" id="confirm-checkout">确认付款</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 付款成功模态框 -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="successModalLabel">付款成功！</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center py-5">
+                <i class="bi bi-check-circle display-1 text-success"></i>
+                <h3 class="mt-4">感谢您的订购！</h3>
+                <p class="lead mb-4">您的订单已成功提交，餐厅将尽快为您准备</p>
+                
+                <div class="card mx-auto" style="max-width: 500px;">
+                    <div class="card-body">
+                        <h6>订单信息</h6>
+                        <p>订单号：<span id="success-order-id">#00000</span></p>
+                        <p>下单时间：<span id="success-order-time">{{ now.strftime('%Y-%m-%d %H:%M:%S') }}</span></p>
+                        <p>支付金额：<span id="success-order-amount" class="text-success fw-bold">¥0.00</span></p>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <p class="text-muted">祝您用餐愉快！</p>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary me-2">
+                    <i class="bi bi-house"></i> 返回首页
+                </a>
+                <a href="{{ url_for('main.restaurants') }}" class="btn btn-primary">
+                    <i class="bi bi-cart"></i> 继续点餐
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.sticky-top {
+    position: sticky;
+    z-index: 1020;
+}
+
+.quantity-input {
+    max-width: 50px;
+}
+
+.checkout-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化总价
+    let currentTotal = {{ total_price|tojson }};
+    
+    // 数量减少按钮
+    document.querySelectorAll('.quantity-minus').forEach(button => {
+        button.addEventListener('click', function() {
+            const dishId = this.dataset.dishId;
+            const currentQuantity = parseInt(this.dataset.currentQuantity);
+            
+            if (currentQuantity > 1) {
+                updateQuantity(dishId, currentQuantity - 1);
+            } else {
+                // 如果数量为1，点击减号会弹出确认删除
+                if (confirm('确定要移除这个菜品吗？')) {
+                    updateQuantity(dishId, 0);
+                }
+            }
+        });
+    });
+    
+    // 数量增加按钮
+    document.querySelectorAll('.quantity-plus').forEach(button => {
+        button.addEventListener('click', function() {
+            const dishId = this.dataset.dishId;
+            const currentQuantity = parseInt(this.dataset.currentQuantity);
+            updateQuantity(dishId, currentQuantity + 1);
+        });
+    });
+    
+    // 删除菜品按钮
+    document.querySelectorAll('.remove-item').forEach(button => {
+        button.addEventListener('click', function() {
+            const dishId = this.dataset.dishId;
+            const dishName = this.dataset.dishName;
+            
+            if (confirm(`确定要删除 "${dishName}" 吗？`)) {
+                updateQuantity(dishId, 0);
+            }
+        });
+    });
+    
+    // 更新数量函数
+    function updateQuantity(dishId, quantity) {
+        fetch('{{ url_for("main.update_cart", dish_id=0) }}'.replace('0', dishId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                quantity: quantity
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 更新页面显示
+                updateCartDisplay(dishId, quantity, data.total_price, data.cart_count);
+                
+                // 如果被移除，隐藏行
+                if (data.removed) {
+                    const row = document.getElementById(`dish-row-${dishId}`);
+                    if (row) {
+                        row.style.opacity = '0';
+                        setTimeout(() => {
+                            row.remove();
+                            updateEmptyState();
+                        }, 300);
+                    }
+                }
+                
+                // 更新购物车总数
+                updateCartCount(data.cart_count || 0);
+                
+                // 更新总价
+                currentTotal = data.total_price || 0;
+                updateTotalDisplay(data.total_price);
+                
+                showToast('success', '已更新数量');
+            } else {
+                showToast('error', data.message || '更新失败');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('error', '网络错误，请稍后重试');
+        });
+    }
+    
+    // 更新购物车显示
+    function updateCartDisplay(dishId, quantity, totalPrice, cartCount) {
+        // 更新数量输入框
+        const quantityInput = document.querySelector(`.quantity-input[data-dish-id="${dishId}"]`);
+        if (quantityInput) {
+            quantityInput.value = quantity;
+        }
+        
+        // 更新按钮的当前数量
+        const minusBtn = document.querySelector(`.quantity-minus[data-dish-id="${dishId}"]`);
+        const plusBtn = document.querySelector(`.quantity-plus[data-dish-id="${dishId}"]`);
+        if (minusBtn) minusBtn.dataset.currentQuantity = quantity;
+        if (plusBtn) plusBtn.dataset.currentQuantity = quantity;
+        
+        // 更新小计
+        const row = document.getElementById(`dish-row-${dishId}`);
+        if (row) {
+            const priceCell = row.querySelector('.text-success');
+            if (priceCell) {
+                const priceText = priceCell.textContent.replace('¥', '');
+                const price = parseFloat(priceText);
+                const itemTotal = price * quantity;
+                const itemTotalElement = document.getElementById(`item-total-${dishId}`);
+                if (itemTotalElement) {
+                    itemTotalElement.textContent = `¥${itemTotal.toFixed(2)}`;
+                }
+            }
+        }
+        
+        // 更新总数量
+        const totalQuantityElement = document.getElementById('total-quantity');
+        if (totalQuantityElement) {
+            totalQuantityElement.textContent = cartCount;
+        }
+    }
+    
+    // 更新总价显示
+    function updateTotalDisplay(totalPrice) {
+        const subtotalElement = document.getElementById('subtotal');
+        const totalPriceElement = document.getElementById('total-price');
+        const checkoutBtn = document.querySelector('.checkout-btn');
+        
+        if (subtotalElement) subtotalElement.textContent = `¥${totalPrice.toFixed(2)}`;
+        if (totalPriceElement) totalPriceElement.textContent = `¥${totalPrice.toFixed(2)}`;
+        
+        // 更新支付按钮
+        if (checkoutBtn) {
+            const btnText = checkoutBtn.innerHTML;
+            const newText = btnText.replace(/¥[\d.]+/, `¥${totalPrice.toFixed(2)}`);
+            checkoutBtn.innerHTML = newText;
+            
+            // 如果没有商品，禁用按钮
+            if (totalPrice <= 0) {
+                checkoutBtn.disabled = true;
+            } else {
+                checkoutBtn.disabled = false;
+            }
+        }
+    }
+    
+    // 更新空状态
+    function updateEmptyState() {
+        const tbody = document.querySelector('tbody');
+        if (tbody && tbody.children.length === 0) {
+            // 如果表格为空，重定向到空购物车状态
+            window.location.reload();
+        }
+    }
+    
+    // 结算按钮点击事件
+    const checkoutBtn = document.querySelector('.checkout-btn');
+    if (checkoutBtn) {
+        checkoutBtn.addEventListener('click', function() {
+            if (currentTotal <= 0) {
+                showToast('warning', '请先添加菜品');
+                return;
+            }
+            
+            // 获取订单备注
+            const remarks = document.getElementById('order-remarks').value.trim();
+            
+            // 准备结算模态框
+            prepareCheckoutModal(remarks);
+            
+            // 显示结算确认模态框
+            const checkoutModal = new bootstrap.Modal(document.getElementById('checkoutModal'));
+            checkoutModal.show();
+        });
+    }
+    
+    // 准备结算模态框
+    function prepareCheckoutModal(remarks) {
+        const checkoutItemsList = document.getElementById('checkout-items-list');
+        const checkoutQuantity = document.getElementById('checkout-quantity');
+        const checkoutTotal = document.getElementById('checkout-total');
+        
+        // 清空现有内容
+        checkoutItemsList.innerHTML = '';
+        
+        // 从DOM获取购物车数据
+        const cartData = {};
+        let totalQuantity = 0;
+        let totalPrice = 0;
+        
+        document.querySelectorAll('tbody tr').forEach(row => {
+            const dishId = row.id.replace('dish-row-', '');
+            const dishName = row.querySelector('h6') ? row.querySelector('h6').textContent : '菜品';
+            const priceCell = row.querySelector('.text-success');
+            const quantityInput = row.querySelector('.quantity-input');
+            
+            if (priceCell && quantityInput) {
+                const priceText = priceCell.textContent.replace('¥', '');
+                const price = parseFloat(priceText);
+                const quantity = parseInt(quantityInput.value);
+                
+                if (quantity > 0) {
+                    const itemTotal = price * quantity;
+                    totalQuantity += quantity;
+                    totalPrice += itemTotal;
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${dishName}</td>
+                        <td class="text-end">×${quantity}</td>
+                        <td class="text-end text-success">¥${itemTotal.toFixed(2)}</td>
+                    `;
+                    checkoutItemsList.appendChild(row);
+                }
+            }
+        });
+        
+        // 更新总计
+        checkoutQuantity.textContent = totalQuantity;
+        checkoutTotal.textContent = `¥${totalPrice.toFixed(2)}`;
+    }
+    
+    // 确认付款按钮
+    document.getElementById('confirm-checkout').addEventListener('click', function() {
+        const remarks = document.getElementById('order-remarks').value.trim();
+        
+        // 显示加载状态
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 处理中...';
+        
+        // 发送结算请求
+        fetch('{{ url_for("main.checkout") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 关闭结算确认模态框
+                bootstrap.Modal.getInstance(document.getElementById('checkoutModal')).hide();
+                
+                // 更新成功模态框信息
+                document.getElementById('success-order-id').textContent = `#${data.order_id}`;
+                document.getElementById('success-order-amount').textContent = `¥${data.total_amount.toFixed(2)}`;
+                
+                // 设置当前时间
+                const now = new Date();
+                const timeString = now.getFullYear() + '-' + 
+                    String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                    String(now.getDate()).padStart(2, '0') + ' ' + 
+                    String(now.getHours()).padStart(2, '0') + ':' + 
+                    String(now.getMinutes()).padStart(2, '0') + ':' + 
+                    String(now.getSeconds()).padStart(2, '0');
+                document.getElementById('success-order-time').textContent = timeString;
+                
+                // 显示成功模态框
+                const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                successModal.show();
+                
+                // 更新购物车数量
+                updateCartCount(0);
+            } else {
+                showToast('error', data.message || '付款失败');
+                this.disabled = false;
+                this.innerHTML = '确认付款';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('error', '网络错误，请稍后重试');
+            this.disabled = false;
+            this.innerHTML = '确认付款';
+        });
+    });
+    
+    // 成功模态框关闭后重定向
+    document.getElementById('successModal').addEventListener('hidden.bs.modal', function () {
+        window.location.href = '{{ url_for("main.dashboard") }}';
+    });
+    
+    // 更新购物车数量显示
+    function updateCartCount(count) {
+        document.querySelectorAll('.badge.bg-danger').forEach(badge => {
+            if (badge.textContent.trim() === String(count) || 
+                badge.closest('.nav-link')?.href.includes('my-table') ||
+                badge.closest('.dropdown-item')?.href.includes('my-table')) {
+                badge.textContent = count;
+            }
+        });
+        
+        document.querySelectorAll('.badge.bg-danger').forEach(badge => {
+            if (count === 0 && badge.parentElement) {
+                badge.style.display = 'none';
+            } else if (count > 0 && badge.parentElement) {
+                badge.style.display = 'inline-block';
+            }
+        });
+    }
+});
+
+// Toast消息函数
+function showToast(type, message) {
+    let toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    const toastId = 'toast-' + Date.now();
+    const toast = document.createElement('div');
+    toast.id = toastId;
+    toast.className = 'toast align-items-center text-white bg-' + (type === 'success' ? 'success' : 
+                       type === 'error' ? 'danger' : 
+                       type === 'warning' ? 'warning' : 'info') + ' border-0';
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bi bi-${type === 'success' ? 'check-circle' : 
+                               type === 'error' ? 'exclamation-circle' : 
+                               type === 'warning' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', function () {
+        toast.remove();
+    });
+}
+</script>  
+{% endblock %}

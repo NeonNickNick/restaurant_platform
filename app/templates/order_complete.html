@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}订单完成 - 餐厅点餐平台{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- 成功提示 -->
+            <div class="card border-success mb-4">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="bi bi-check-circle"></i> 订单支付成功！</h4>
+                </div>
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-check-circle display-1 text-success mb-4"></i>
+                    <h3 class="mb-3">感谢您的订购！</h3>
+                    <p class="lead mb-4">您的订单已成功提交，餐厅将尽快为您准备</p>
+                    
+                    <div class="d-flex justify-content-center gap-3 mb-5">
+                        <div class="text-center">
+                            <div class="bg-light rounded-circle p-3 mb-2 mx-auto" style="width: 80px; height: 80px;">
+                                <i class="bi bi-clock display-6 text-primary"></i>
+                            </div>
+                            <small>订单已接收</small>
+                        </div>
+                        <div class="text-center">
+                            <div class="bg-light rounded-circle p-3 mb-2 mx-auto" style="width: 80px; height: 80px;">
+                                <i class="bi bi-egg-fried display-6 text-warning"></i>
+                            </div>
+                            <small>餐厅准备中</small>
+                        </div>
+                        <div class="text-center">
+                            <div class="bg-light rounded-circle p-3 mb-2 mx-auto" style="width: 80px; height: 80px;">
+                                <i class="bi bi-truck display-6 text-success"></i>
+                            </div>
+                            <small>配送中</small>
+                        </div>
+                    </div>
+                    
+                    <!-- 订单信息卡片 -->
+                    <div class="card mx-auto mb-4" style="max-width: 500px;">
+                        <div class="card-header">
+                            <h5 class="mb-0">订单信息</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-start">
+                                <div class="col-6">
+                                    <p class="mb-2"><strong>订单号：</strong></p>
+                                    <p class="mb-2"><strong>下单时间：</strong></p>
+                                    <p class="mb-2"><strong>支付方式：</strong></p>
+                                    <p class="mb-0"><strong>订单状态：</strong></p>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <p class="mb-2">#{{ order.id }}</p>
+                                    <p class="mb-2">{{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                                    <p class="mb-2">在线支付</p>
+                                    <p class="mb-0"><span class="badge bg-success">已支付</span></p>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-bold">支付金额：</span>
+                                <span class="text-success fw-bold fs-4">¥{{ "%.2f"|format(order.total_amount) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 订单菜品列表 -->
+                    <div class="card mx-auto mb-4" style="max-width: 500px;">
+                        <div class="card-header">
+                            <h5 class="mb-0">菜品清单</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>菜品</th>
+                                            <th class="text-center">数量</th>
+                                            <th class="text-end">小计</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in order.items %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <img src="{{ url_for('static', filename='uploads/dishes/' + item.dish.image_path) }}" 
+                                                         alt="{{ item.dish.name }}" 
+                                                         class="rounded me-2" 
+                                                         width="40" height="40" style="object-fit: cover;">
+                                                    <div>
+                                                        <strong>{{ item.dish.name }}</strong>
+                                                        <div class="text-muted small">¥{{ "%.2f"|format(item.price_at_time) }}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">×{{ item.quantity }}</td>
+                                            <td class="text-end text-success">¥{{ "%.2f"|format(item.price_at_time * item.quantity) }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="2" class="text-end fw-bold">总计：</td>
+                                            <td class="text-end text-success fw-bold fs-5">¥{{ "%.2f"|format(order.total_amount) }}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 餐厅信息 -->
+                    <div class="card mx-auto mb-4" style="max-width: 500px;">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <img src="{{ url_for('static', filename='uploads/logos/' + order.restaurant.logo_path) }}" 
+                                     alt="{{ order.restaurant.name }}" 
+                                     class="rounded-circle me-3" 
+                                     width="60" height="60" style="object-fit: cover;">
+                                <div>
+                                    <h5 class="mb-1">{{ order.restaurant.name }}</h5>
+                                    {% if order.restaurant.description %}
+                                    <p class="text-muted small mb-0">{{ order.restaurant.description|truncate(50) }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <p class="mb-0">
+                                <i class="bi bi-clock"></i> 预计准备时间：<strong>20-30分钟</strong>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- 感谢信息 -->
+                    <div class="alert alert-success" role="alert">
+                        <h4 class="alert-heading"><i class="bi bi-emoji-smile"></i> 祝您用餐愉快！</h4>
+                        <p>感谢您选择我们的平台，期待您的再次光临！</p>
+                    </div>
+                    
+                    <!-- 操作按钮 -->
+                    <div class="d-flex justify-content-center gap-3 mt-4">
+                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary btn-lg">
+                            <i class="bi bi-house"></i> 返回首页
+                        </a>
+                        <a href="{{ url_for('main.restaurants') }}" class="btn btn-primary btn-lg">
+                            <i class="bi bi-cart"></i> 继续点餐
+                        </a>
+                        <a href="{{ url_for('restaurant.order_detail', restaurant_id=order.restaurant.id, order_id=order.id) }}" 
+                           class="btn btn-outline-success btn-lg">
+                            <i class="bi bi-eye"></i> 查看订单详情
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 使用提示 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lightbulb"></i> 使用提示</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="text-center">
+                                <i class="bi bi-bell display-6 text-primary mb-2"></i>
+                                <h6>订单通知</h6>
+                                <p class="small text-muted">餐厅状态变化会通过系统通知您</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="text-center">
+                                <i class="bi bi-clock-history display-6 text-warning mb-2"></i>
+                                <h6>订单历史</h6>
+                                <p class="small text-muted">在"控制面板"中查看您的历史订单</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="text-center">
+                                <i class="bi bi-star display-6 text-success mb-2"></i>
+                                <h6>评价菜品</h6>
+                                <p class="small text-muted">用餐后可对菜品进行评价</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.card {
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 页面加载完成后的操作
+document.addEventListener('DOMContentLoaded', function() {
+    // 添加一些动画效果
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+        card.classList.add('animate__animated', 'animate__fadeInUp');
+    });
+    
+    // 显示订单号复制功能
+    const orderIdElement = document.querySelector('.card-body p:first-child');
+    if (orderIdElement) {
+        orderIdElement.style.cursor = 'pointer';
+        orderIdElement.title = '点击复制订单号';
+        
+        orderIdElement.addEventListener('click', function() {
+            const orderId = this.textContent.replace('订单号：', '').trim();
+            navigator.clipboard.writeText(orderId).then(() => {
+                showToast('success', '订单号已复制到剪贴板');
+            });
+        });
+    }
+});
+
+// Toast消息函数
+function showToast(type, message) {
+    let toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    const toastId = 'toast-' + Date.now();
+    const toast = document.createElement('div');
+    toast.id = toastId;
+    toast.className = 'toast align-items-center text-white bg-' + (type === 'success' ? 'success' : 
+                       type === 'error' ? 'danger' : 
+                       type === 'warning' ? 'warning' : 'info') + ' border-0';
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bi bi-${type === 'success' ? 'check-circle' : 
+                               type === 'error' ? 'exclamation-circle' : 
+                               type === 'warning' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', function () {
+        toast.remove();
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,202 @@
+{% extends "restaurant/base.html" %}
+
+{% block restaurant_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>菜品管理</h2>
+    <div>
+        <a href="{{ url_for('restaurant.add_dish', restaurant_id=restaurant.id) }}" class="btn btn-success">
+            <i class="bi bi-plus-circle"></i> 添加菜品
+        </a>
+        <a href="{{ url_for('restaurant.categories', restaurant_id=restaurant.id) }}" class="btn btn-outline-primary">
+            <i class="bi bi-tags"></i> 分类管理
+        </a>
+    </div>
+</div>
+
+<!-- 分类筛选 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h6>按分类筛选：</h6>
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('restaurant.dishes', restaurant_id=restaurant.id) }}" 
+               class="btn btn-outline-secondary {% if not current_category %}active{% endif %}">
+                全部菜品
+            </a>
+            {% for category in categories %}
+            <a href="{{ url_for('restaurant.dishes', restaurant_id=restaurant.id, category_id=category.id) }}" 
+               class="btn btn-outline-secondary {% if current_category == category.id %}active{% endif %}">
+                {{ category.name }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- 菜品列表 -->
+<div class="card">
+    <div class="card-body">
+        {% if dishes.items %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for dish in dishes.items %}
+            <div class="col">
+                <div class="card h-100 dish-card">
+                    <div class="position-relative">
+                        <img src="{{ url_for('restaurant.uploaded_file', folder='dishes', filename=dish.image_path) }}" 
+                             class="card-img-top dish-image" alt="{{ dish.name }}">
+                        <span class="position-absolute top-0 end-0 m-2 badge {% if dish.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                            {% if dish.is_active %}上架中{% else %}已下架{% endif %}
+                        </span>
+                        <span class="position-absolute top-0 start-0 m-2 badge bg-info">
+                            ¥{{ "%.2f"|format(dish.price) }}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ dish.name }}</h5>
+                        <p class="card-text text-muted small">{{ dish.description|truncate(50) }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="bi bi-tag"></i> {{ dish.category.name }}
+                            </small>
+                            <small class="text-muted">
+                                被点: {{ dish.order_count }} 次
+                            </small>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent border-top-0">
+                        <div class="btn-group w-100" role="group">
+                            <a href="{{ url_for('restaurant.dish_detail', restaurant_id=restaurant.id, dish_id=dish.id) }}" 
+                               class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-eye"></i> 查看
+                            </a>
+                            <a href="{{ url_for('restaurant.edit_dish', restaurant_id=restaurant.id, dish_id=dish.id) }}" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> 编辑
+                            </a>
+                            <form method="POST" 
+                                  action="{{ url_for('restaurant.toggle_dish_status', restaurant_id=restaurant.id, dish_id=dish.id) }}" 
+                                  style="display: inline;">
+                                <button type="submit" class="btn btn-sm btn-outline-warning">
+                                    {% if dish.is_active %}
+                                    <i class="bi bi-eye-slash"></i> 下架
+                                    {% else %}
+                                    <i class="bi bi-eye"></i> 上架
+                                    {% endif %}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- 分页 -->
+        {% if dishes.pages > 1 %}
+        <nav aria-label="菜品分页" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if dishes.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('restaurant.dishes', restaurant_id=restaurant.id, page=dishes.prev_num, category_id=current_category) }}">
+                        上一页
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">上一页</span>
+                </li>
+                {% endif %}
+                
+                {% for page_num in dishes.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num == dishes.page %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('restaurant.dishes', restaurant_id=restaurant.id, page=page_num, category_id=current_category) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if dishes.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('restaurant.dishes', restaurant_id=restaurant.id, page=dishes.next_num, category_id=current_category) }}">
+                        下一页
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">下一页</span>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-egg display-1 text-muted"></i>
+            <h4 class="mt-3">暂无菜品</h4>
+            <p class="text-muted">您还没有添加任何菜品，点击右上角"添加菜品"开始添加</p>
+            <a href="{{ url_for('restaurant.add_dish', restaurant_id=restaurant.id) }}" class="btn btn-success btn-lg mt-2">
+                <i class="bi bi-plus-circle"></i> 添加第一个菜品
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 统计信息 -->
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h2 class="text-primary">{{ dishes.total }}</h2>
+                <p class="text-muted mb-0">菜品总数</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h2 class="text-success">{{ dishes.items|selectattr('is_active')|list|length }}</h2>
+                <p class="text-muted mb-0">上架中</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h2 class="text-warning">{{ dishes.items|rejectattr('is_active')|list|length }}</h2>
+                <p class="text-muted mb-0">已下架</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dish-image {
+        height: 200px;
+        object-fit: cover;
+    }
+    
+    .dish-card {
+        transition: transform 0.2s;
+    }
+    
+    .dish-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}

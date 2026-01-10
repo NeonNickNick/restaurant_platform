@@ -1,0 +1,362 @@
+{% extends "restaurant/base.html" %}
+
+{% block restaurant_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>顾客详情</h2>
+    <div>
+        <a href="{{ url_for('restaurant.customers', restaurant_id=restaurant.id) }}" 
+           class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 返回顾客列表
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 左侧：顾客信息卡片 -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-body text-center">
+                <!-- 顾客头像 -->
+                <img src="{{ url_for('static', filename='uploads/avatars/' + customer.avatar_path) }}" 
+                     alt="{{ customer.username }}" 
+                     class="rounded-circle mb-3" 
+                     width="120" 
+                     height="120"
+                     style="object-fit: cover;">
+                
+                <!-- 顾客姓名 -->
+                <h4>{{ customer.username }}</h4>
+                <p class="text-muted mb-4">{{ customer.email }}</p>
+                
+                <!-- 用户角色和注册时间 -->
+                <div class="d-flex justify-content-center mb-4">
+                    <span class="badge bg-primary me-2">顾客</span>
+                    {% if customer.created_at %}
+                    <span class="badge bg-secondary">注册于 {{ customer.created_at.strftime('%Y年%m月%d日') }}</span>
+                    {% endif %}
+                </div>
+                
+                <!-- 消费统计 -->
+                <div class="list-group list-group-flush text-start mb-4">
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>总消费额</span>
+                        <strong class="text-success">¥{{ "%.2f"|format(total_spent) }}</strong>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>订单数量</span>
+                        <span class="badge bg-info rounded-pill">{{ order_count }} 单</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>客单价</span>
+                        <strong>
+                            {% if order_count > 0 %}
+                            ¥{{ "%.2f"|format(total_spent / order_count) }}
+                            {% else %}
+                            ¥0.00
+                            {% endif %}
+                        </strong>
+                    </div>
+                </div>
+                
+                <!-- 黑名单操作 -->
+                {% if is_blacklisted %}
+                <form method="POST" 
+                      action="{{ url_for('restaurant.remove_from_blacklist', restaurant_id=restaurant.id, record_id=blacklist_record.id) }}" 
+                      class="mt-3">
+                    <button type="submit" 
+                            class="btn btn-success btn-sm" 
+                            onclick="return confirm('确定要将此用户移出黑名单吗？')">
+                        <i class="bi bi-check-circle"></i> 移出黑名单
+                    </button>
+                </form>
+                {% else %}
+                <form method="POST" 
+                      action="{{ url_for('restaurant.add_to_blacklist', restaurant_id=restaurant.id) }}" 
+                      class="mt-3" 
+                      id="blacklistForm">
+                    <input type="hidden" name="user_id" value="{{ customer.id }}">
+                    <div class="mb-2">
+                        <textarea name="reason" 
+                                  class="form-control form-control-sm" 
+                                  placeholder="加入黑名单原因..." 
+                                  rows="2" 
+                                  required></textarea>
+                    </div>
+                    <button type="submit" 
+                            class="btn btn-danger btn-sm" 
+                            onclick="return confirm('确定要加入黑名单吗？')">
+                        <i class="bi bi-ban"></i> 加入黑名单
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 最爱菜品 -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">最爱菜品</h5>
+            </div>
+            <div class="card-body">
+                {% if favorite_dishes %}
+                <div class="list-group list-group-flush">
+                    {% for dish_name, quantity in favorite_dishes %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ dish_name }}
+                        <span class="badge bg-primary rounded-pill">{{ quantity }} 次</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center mb-0">暂无菜品数据</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- 右侧：订单记录和消费统计 -->
+    <div class="col-lg-8">
+        <!-- 订单列表 -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">消费记录</h5>
+                <span class="badge bg-secondary">{{ order_count }} 个订单</span>
+            </div>
+            <div class="card-body">
+                {% if orders %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>订单号</th>
+                                <th>时间</th>
+                                <th>金额</th>
+                                <th>状态</th>
+                                <th>备注</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders %}
+                            <tr>
+                                <td>
+                                    <strong>#{{ order.id }}</strong>
+                                </td>
+                                <td>
+                                    <small>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </td>
+                                <td class="text-success">
+                                    <strong>¥{{ "%.2f"|format(order.total_amount) }}</strong>
+                                </td>
+                                <td>
+                                    {% if order.status == 'pending' %}
+                                    <span class="badge bg-warning">待支付</span>
+                                    {% elif order.status == 'paid' %}
+                                    <span class="badge bg-info">已支付</span>
+                                    {% elif order.status == 'completed' %}
+                                    <span class="badge bg-success">已完成</span>
+                                    {% elif order.status == 'cancelled' %}
+                                    <span class="badge bg-danger">已取消</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if order.remarks %}
+                                    <small class="text-muted" title="{{ order.remarks }}">
+                                        {{ order.remarks[:20] }}{% if order.remarks|length > 20 %}...{% endif %}
+                                    </small>
+                                    {% else %}
+                                    <small class="text-muted">-</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('restaurant.order_detail', restaurant_id=restaurant.id, order_id=order.id) }}" 
+                                       class="btn btn-sm btn-outline-info">
+                                        <i class="bi bi-eye"></i> 详情
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-receipt display-1 text-muted"></i>
+                    <h5 class="mt-3">暂无消费记录</h5>
+                    <p class="text-muted">该顾客还没有下单</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 菜品消费统计 -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">菜品消费统计</h5>
+                <span class="badge bg-secondary">{{ dish_stats|length if dish_stats else 0 }} 个菜品</span>
+            </div>
+            <div class="card-body">
+                {% if dish_stats %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>菜品名称</th>
+                                <th>菜品分类</th>
+                                <th>点菜次数</th>
+                                <th>消费份数</th>
+                                <th>消费金额</th>
+                                <th>平均单价</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dish_name, category_name, total_quantity, total_spent, dish_id in dish_stats %}
+                            <tr>
+                                <td>
+                                    <strong>{{ dish_name }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ category_name }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ total_quantity }} 次</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ total_quantity }} 份</span>
+                                </td>
+                                <td class="text-success">
+                                    <strong>¥{{ "%.2f"|format(total_spent) }}</strong>
+                                </td>
+                                <td>
+                                    ¥{{ "%.2f"|format(total_spent / total_quantity if total_quantity > 0 else 0) }}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('restaurant.dish_detail', restaurant_id=restaurant.id, dish_id=dish_id) }}" 
+                                       class="btn btn-sm btn-outline-info">
+                                        <i class="bi bi-eye"></i> 详情
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-cup-straw display-1 text-muted"></i>
+                    <h5 class="mt-3">暂无菜品消费记录</h5>
+                    <p class="text-muted">该顾客还没有点过菜</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 消费时间统计 -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6>首次消费</h6>
+                        <h4 class="text-primary">
+                            {% if orders and orders[-1] %}
+                            {{ orders[-1].created_at.strftime('%Y-%m-%d') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </h4>
+                        {% if orders and orders[-1] %}
+                        <small class="text-muted">订单 #{{ orders[-1].id }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6>最后消费</h6>
+                        <h4 class="text-success">
+                            {% if orders and orders[0] %}
+                            {{ orders[0].created_at.strftime('%Y-%m-%d') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </h4>
+                        {% if orders and orders[0] %}
+                        <small class="text-muted">订单 #{{ orders[0].id }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 消费频次统计 -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">消费频次</h5>
+            </div>
+            <div class="card-body">
+                {% if orders|length >= 2 %}
+                {% set first_date = orders[-1].created_at %}
+                {% set last_date = orders[0].created_at %}
+                {% set days_diff = (last_date - first_date).days %}
+                
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h5 class="text-primary">{{ orders|length }}</h5>
+                        <small class="text-muted">总订单数</small>
+                    </div>
+                    <div class="col-4">
+                        <h5 class="text-success">
+                            {% if days_diff > 0 %}
+                            {{ "%.1f"|format(orders|length / days_diff * 30) }}
+                            {% else %}
+                            0
+                            {% endif %}
+                        </h5>
+                        <small class="text-muted">月均订单</small>
+                    </div>
+                    <div class="col-4">
+                        <h5 class="text-warning">
+                            {% if days_diff > 0 %}
+                            {{ "%.0f"|format(days_diff / orders|length) }}
+                            {% else %}
+                            0
+                            {% endif %}
+                        </h5>
+                        <small class="text-muted">平均间隔(天)</small>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted text-center mb-0">订单数量不足，无法计算消费频次</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 黑名单表单确认
+document.getElementById('blacklistForm')?.addEventListener('submit', function(e) {
+    const reason = this.querySelector('textarea[name="reason"]').value.trim();
+    if (!reason) {
+        e.preventDefault();
+        alert('请填写加入黑名单的原因');
+        return false;
+    }
+    return confirm('确定要将此用户加入黑名单吗？');
+});
+
+// 如果订单有备注，点击可以查看完整备注
+document.querySelectorAll('.text-muted[title]').forEach(function(element) {
+    element.addEventListener('click', function() {
+        const fullRemark = this.getAttribute('title');
+        if (fullRemark && fullRemark.length > 20) {
+            alert('订单备注：' + fullRemark);
+        }
+    });
+});
+</script>
+{% endblock %}

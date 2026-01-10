@@ -1,0 +1,236 @@
+{% extends "restaurant/base.html" %}
+
+{% block restaurant_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>订单详情 #{{ order.id }}</h2>
+    <div>
+        <a href="{{ url_for('restaurant.orders', restaurant_id=restaurant.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- 订单信息 -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">订单信息</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table">
+                            <tr>
+                                <th width="120">订单号</th>
+                                <td><strong>#{{ order.id }}</strong></td>
+                            </tr>
+                            <tr>
+                                <th>顾客</th>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <img src="{{ url_for('static', filename='uploads/avatars/' + order.customer.avatar_path) }}" 
+                                             alt="头像" class="rounded-circle me-2" width="30" height="30">
+                                        {{ order.customer.username }}
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>下单时间</th>
+                                <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            </tr>
+                            {% if order.paid_at %}
+                            <tr>
+                                <th>支付时间</th>
+                                <td>{{ order.paid_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table">
+                            <tr>
+                                <th width="120">订单状态</th>
+                                <td>
+                                    {% if order.status == 'pending' %}
+                                    <span class="badge bg-warning">待支付</span>
+                                    {% elif order.status == 'paid' %}
+                                    <span class="badge bg-primary">已支付</span>
+                                    {% elif order.status == 'completed' %}
+                                    <span class="badge bg-success">已完成</span>
+                                    {% elif order.status == 'cancelled' %}
+                                    <span class="badge bg-danger">已取消</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>订单金额</th>
+                                <td><h4 class="text-success mb-0">¥{{ "%.2f"|format(order.total_amount) }}</h4></td>
+                            </tr>
+                            <tr>
+                                <th>操作</th>
+                                <td>
+                                    <!-- 状态更新表单 -->
+                                    <form method="POST" action="{{ url_for('restaurant.update_order_status', restaurant_id=restaurant.id, order_id=order.id) }}" 
+                                          class="d-inline">
+                                        <div class="input-group input-group-sm">
+                                            <select name="status" class="form-select form-select-sm">
+                                                <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>待支付</option>
+                                                <option value="paid" {% if order.status == 'paid' %}selected{% endif %}>已支付</option>
+                                                <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>已完成</option>
+                                                <option value="cancelled" {% if order.status == 'cancelled' %}selected{% endif %}>已取消</option>
+                                            </select>
+                                            <button type="submit" class="btn btn-primary btn-sm">更新状态</button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 菜品列表 -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">菜品清单</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>菜品</th>
+                                <th>单价</th>
+                                <th>数量</th>
+                                <th>小计</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order.items %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <img src="{{ url_for('restaurant.uploaded_file', folder='dishes', filename=item.dish.image_path) }}" 
+                                             alt="{{ item.dish.name }}" class="rounded me-2" width="50" height="50">
+                                        <div>
+                                            <strong>{{ item.dish.name }}</strong>
+                                            <div class="text-muted small">{{ item.dish.category.name }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>¥{{ "%.2f"|format(item.price_at_time) }}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td class="text-success">¥{{ "%.2f"|format(item.price_at_time * item.quantity) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>总计：</strong></td>
+                                <td class="text-success fs-5">¥{{ "%.2f"|format(order.total_amount) }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- 顾客信息 -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">顾客信息</h5>
+            </div>
+            <div class="card-body text-center">
+                <img src="{{ url_for('static', filename='uploads/avatars/' + order.customer.avatar_path) }}" 
+                     alt="头像" class="rounded-circle mb-3" width="100" height="100">
+                <h5>{{ order.customer.username }}</h5>
+                <p class="text-muted">{{ order.customer.email }}</p>
+                
+                <div class="d-grid gap-2 mt-4">
+                    <a href="{{ url_for('restaurant.customer_detail', restaurant_id=restaurant.id, customer_id=order.customer.id) }}" 
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-person"></i> 查看顾客详情
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 操作记录 -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">订单状态历史</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>订单创建</span>
+                        <small class="text-muted">{{ order.created_at.strftime('%m-%d %H:%M') }}</small>
+                    </li>
+                    {% if order.status in ['paid', 'completed'] %}
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>支付完成</span>
+                        {% if order.paid_at %}
+                        <small class="text-muted">{{ order.paid_at.strftime('%m-%d %H:%M') }}</small>
+                        {% else %}
+                        <small class="text-muted">-</small>
+                        {% endif %}
+                    </li>
+                    {% endif %}
+                    {% if order.status == 'completed' %}
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>订单完成</span>
+                        <small class="text-muted">{{ order.updated_at.strftime('%m-%d %H:%M') if order.updated_at else '-' }}</small>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        
+        <!-- 快速操作 -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6>快速操作</h6>
+                <div class="d-grid gap-2">
+                    {% if order.status == 'pending' %}
+                    <button class="btn btn-success" onclick="updateStatus('paid')">
+                        <i class="bi bi-check-circle"></i> 标记为已支付
+                    </button>
+                    <button class="btn btn-danger" onclick="updateStatus('cancelled')">
+                        <i class="bi bi-x-circle"></i> 取消订单
+                    </button>
+                    {% elif order.status == 'paid' %}
+                    <button class="btn btn-success" onclick="updateStatus('completed')">
+                        <i class="bi bi-check-circle"></i> 标记为已完成
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateStatus(status) {
+    if (confirm('确定要更新订单状态吗？')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ url_for('restaurant.update_order_status', restaurant_id=restaurant.id, order_id=order.id) }}";
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'status';
+        input.value = status;
+        form.appendChild(input);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

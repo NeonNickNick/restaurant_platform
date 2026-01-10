@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- 餐厅信息 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-2 text-center">
+                    <img src="{{ url_for('static', filename='uploads/logos/' + restaurant.logo_path) }}" 
+                         alt="{{ restaurant.name }}" 
+                         class="img-fluid rounded-circle" 
+                         style="max-width: 100px;">
+                </div>
+                <div class="col-md-10">
+                    <h2>{{ restaurant.name }}</h2>
+                    {% if restaurant.description %}
+                    <p class="text-muted">{{ restaurant.description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 菜品分类 -->
+    {% for category, dishes in dishes_by_category.items() %}
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">{{ category.name }}</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for dish in dishes %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <img src="{{ url_for('static', filename='uploads/dishes/' + dish.image_path) }}" 
+                             class="card-img-top" 
+                             alt="{{ dish.name }}"
+                             style="height: 180px; object-fit: cover;">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ dish.name }}</h5>
+                            <p class="card-text text-muted small">{{ dish.description|truncate(60) }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="h5 text-success mb-0">¥{{ "%.2f"|format(dish.price) }}</span>
+                                {% if current_user.is_authenticated and current_user.id != restaurant.owner_id %}
+                                <button class="btn btn-sm btn-primary add-to-cart" 
+                                        data-dish-id="{{ dish.id }}"
+                                        data-dish-name="{{ dish.name }}"
+                                        data-dish-price="{{ dish.price }}">
+                                    <i class="bi bi-cart-plus"></i> 加入购物车
+                                </button>
+                                {% elif not current_user.is_authenticated %}
+                                <a href="{{ url_for('auth.login') }}" class="btn btn-sm btn-outline-primary">
+                                    登录后点餐
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    
+    <!-- 如果没有菜品 -->
+    {% if not dishes_by_category %}
+    <div class="text-center py-5">
+        <i class="bi bi-egg display-1 text-muted"></i>
+        <h3 class="mt-3">暂无上架菜品</h3>
+        <p class="text-muted">该餐厅还没有上架任何菜品</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 简单的购物车功能
+document.addEventListener('DOMContentLoaded', function() {
+    const addToCartButtons = document.querySelectorAll('.add-to-cart');
+    
+    addToCartButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const dishId = this.dataset.dishId;
+            const dishName = this.dataset.dishName;
+            const dishPrice = this.dataset.dishPrice;
+            
+            // 这里可以添加购物车逻辑
+            alert(`已添加 ${dishName} 到购物车`);
+            
+            // 可以发送AJAX请求到后端
+            fetch(`/cart/add/${dishId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            }).then(response => {
+                if (response.ok) {
+                    this.innerHTML = '<i class="bi bi-check"></i> 已添加';
+                    this.classList.remove('btn-primary');
+                    this.classList.add('btn-success');
+                    this.disabled = true;
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

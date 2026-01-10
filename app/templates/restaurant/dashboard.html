@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- 左侧导航栏 -->
+        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky pt-3">
+                <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                    <span>功能菜单</span>
+                </h6>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('restaurant.dashboard', restaurant_id=restaurant.id) }}">
+                            <i class="bi bi-speedometer2"></i>
+                            仪表板
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('restaurant.dishes', restaurant_id=restaurant.id) }}">
+                            <i class="bi bi-egg-fried"></i>
+                            菜品管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('restaurant.orders', restaurant_id=restaurant.id) }}">
+                            <i class="bi bi-receipt"></i>
+                            订单管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('restaurant.categories', restaurant_id=restaurant.id) }}">
+                            <i class="bi bi-tags"></i>
+                            分类管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('restaurant.customers', restaurant_id=restaurant.id) }}">
+                            <i class="bi bi-people"></i>
+                            顾客管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('restaurant.reports', restaurant_id=restaurant.id) }}">
+                            <i class="bi bi-bar-chart"></i>
+                            数据报表
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('restaurant.advisor', restaurant_id=restaurant.id) }}">
+                            <i class="bi bi-lightbulb"></i>
+                            经营顾问
+                        </a>
+                    </li>
+                </ul>
+                
+                <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                    <span>餐厅设置</span>
+                </h6>
+                <ul class="nav flex-column mb-2">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('restaurant.edit_restaurant', restaurant_id=restaurant.id) }}">
+                            <i class="bi bi-gear"></i>
+                            餐厅设置
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 主要内容区域 -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">餐厅管理仪表板</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <span class="badge bg-success">{{ restaurant.name }}</span>
+                </div>
+            </div>
+
+            <!-- 统计卡片 -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-primary shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                        在售菜品
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_dishes }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="bi bi-egg-fried fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-success shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                        总订单数
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_orders }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="bi bi-receipt fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-info shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                        总销售额
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">¥{{ "%.2f"|format(stats.total_sales) }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="bi bi-currency-yen fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-warning shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                        顾客总数
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_customers }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="bi bi-people fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 快速操作 -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">快速操作</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-xl-3 col-md-6 mb-4">
+                                    <a href="{{ url_for('restaurant.dishes', restaurant_id=restaurant.id) }}" 
+                                       class="btn btn-outline-primary btn-icon-split p-3">
+                                        <span class="icon text-white-50">
+                                            <i class="bi bi-egg-fried"></i>
+                                        </span>
+                                        <span class="text">管理菜品</span>
+                                    </a>
+                                </div>
+                                <div class="col-xl-3 col-md-6 mb-4">
+                                    <a href="{{ url_for('restaurant.orders', restaurant_id=restaurant.id) }}" 
+                                       class="btn btn-outline-success btn-icon-split p-3">
+                                        <span class="icon text-white-50">
+                                            <i class="bi bi-receipt"></i>
+                                        </span>
+                                        <span class="text">查看订单</span>
+                                    </a>
+                                </div>
+                                <div class="col-xl-3 col-md-6 mb-4">
+                                    <a href="{{ url_for('restaurant.categories', restaurant_id=restaurant.id) }}" 
+                                       class="btn btn-outline-info btn-icon-split p-3">
+                                        <span class="icon text-white-50">
+                                            <i class="bi bi-tags"></i>
+                                        </span>
+                                        <span class="text">分类管理</span>
+                                    </a>
+                                </div>
+                                <div class="col-xl-3 col-md-6 mb-4">
+                                    <a href="{{ url_for('restaurant.reports', restaurant_id=restaurant.id) }}" 
+                                       class="btn btn-outline-warning btn-icon-split p-3">
+                                        <span class="icon text-white-50">
+                                            <i class="bi bi-bar-chart"></i>
+                                        </span>
+                                        <span class="text">查看报表</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- 今日销售统计 -->
+                <div class="col-xl-4 col-md-6 mb-4">
+                    <div class="card shadow h-100">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">今日销售统计</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="text-center">
+                                <div class="h4 mb-3 text-success">¥{{ "%.2f"|format(stats.today_sales) }}</div>
+                                <p class="text-muted">今日销售额</p>
+                            </div>
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">¥{{ "%.2f"|format(stats.week_sales) }}</div>
+                                    <div class="small text-muted">本周销售</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">¥{{ "%.2f"|format(stats.month_sales) }}</div>
+                                    <div class="small text-muted">本月销售</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 最近订单 -->
+                <div class="col-xl-4 col-md-6 mb-4">
+                    <div class="card shadow h-100">
+                        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 font-weight-bold text-primary">最近订单</h6>
+                            <a href="{{ url_for('restaurant.orders', restaurant_id=restaurant.id) }}" class="btn btn-sm btn-outline-primary">查看全部</a>
+                        </div>
+                        <div class="card-body">
+                            {% if recent_orders %}
+                            <div class="list-group list-group-flush">
+                                {% for order in recent_orders %}
+                                <a href="{{ url_for('restaurant.order_detail', restaurant_id=restaurant.id, order_id=order.id) }}" 
+                                   class="list-group-item list-group-item-action">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <strong>#{{ order.id }}</strong>
+                                            <span class="badge {% if order.status == 'paid' %}bg-success{% elif order.status == 'pending' %}bg-warning{% else %}bg-secondary{% endif %} ms-2">
+                                                {{ order.status }}
+                                            </span>
+                                        </div>
+                                        <div class="text-success">¥{{ "%.2f"|format(order.total_amount) }}</div>
+                                    </div>
+                                    <small class="text-muted">{{ order.created_at.strftime('%m-%d %H:%M') }}</small>
+                                </a>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="text-muted text-center mb-0">暂无订单</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 热门菜品 -->
+                <div class="col-xl-4 col-md-6 mb-4">
+                    <div class="card shadow h-100">
+                        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 font-weight-bold text-primary">热门菜品</h6>
+                            <a href="{{ url_for('restaurant.dishes', restaurant_id=restaurant.id) }}" class="btn btn-sm btn-outline-primary">查看全部</a>
+                        </div>
+                        <div class="card-body">
+                            {% if top_dishes %}
+                            <div class="list-group list-group-flush">
+                                {% for dish, quantity in top_dishes %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ dish.name }}</strong>
+                                            <div class="text-muted small">{{ dish.category.name }}</div>
+                                        </div>
+                                        <div>
+                                            <span class="badge bg-primary">{{ quantity }} 份</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="text-muted text-center mb-0">暂无销售数据</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 餐厅信息 -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow">
+                        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 font-weight-bold text-primary">餐厅信息</h6>
+                            <a href="{{ url_for('restaurant.edit_restaurant', restaurant_id=restaurant.id) }}" 
+                               class="btn btn-sm btn-outline-secondary">编辑信息</a>
+                        </div>
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-2 text-center mb-3 mb-md-0">
+                                    <img src="{{ url_for('static', filename='uploads/logos/' + restaurant.logo_path) }}" 
+                                         alt="{{ restaurant.name }}" 
+                                         class="img-fluid rounded-circle" 
+                                         style="width: 100px; height: 100px; object-fit: cover;">
+                                </div>
+                                <div class="col-md-8">
+                                    <h4 class="mb-1">{{ restaurant.name }}</h4>
+                                    {% if restaurant.description %}
+                                    <p class="text-muted mb-2">{{ restaurant.description }}</p>
+                                    {% endif %}
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <span class="badge bg-light text-dark">
+                                            <i class="bi bi-calendar me-1"></i>创建于 {{ restaurant.created_at.strftime('%Y年%m月%d日') }}
+                                        </span>
+                                        <span class="badge bg-light text-dark">
+                                            <i class="bi bi-egg-fried me-1"></i>{{ stats.total_dishes }} 个菜品
+                                        </span>
+                                        <span class="badge bg-light text-dark">
+                                            <i class="bi bi-people me-1"></i>{{ stats.total_customers }} 位顾客
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="col-md-2 text-md-end mt-3 mt-md-0">
+                                    <a href="{{ url_for('restaurant.dishes', restaurant_id=restaurant.id) }}" 
+                                       class="btn btn-outline-success">
+                                        <i class="bi bi-eye"></i> 预览菜品
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 简单的页面交互
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('餐厅管理仪表板加载完成');
+    
+    // 添加卡片悬停效果
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.transition = 'transform 0.2s ease';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+});
+</script>
+{% endblock %}

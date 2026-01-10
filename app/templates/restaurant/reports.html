@@ -1,0 +1,460 @@
+{% extends "restaurant/base.html" %}
+
+{% block restaurant_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>数据报表</h2>
+    <div>
+        <span class="badge bg-info">实时数据</span>
+    </div>
+</div>
+
+<!-- 筛选表单 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="POST" action="" novalidate>
+            {{ form.hidden_tag() }}
+            
+            <div class="row g-3">
+                <div class="col-md-3">
+                    {{ form.period.label(class="form-label") }}
+                    {{ form.period(class="form-select" + (" is-invalid" if form.period.errors else "")) }}
+                    {% for error in form.period.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                
+                <div class="col-md-3">
+                    {{ form.chart_type.label(class="form-label") }}
+                    {{ form.chart_type(class="form-select" + (" is-invalid" if form.chart_type.errors else "")) }}
+                    {% for error in form.chart_type.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                
+                <div class="col-md-3">
+                    {{ form.top_n.label(class="form-label") }}
+                    {{ form.top_n(class="form-control" + (" is-invalid" if form.top_n.errors else "")) }}
+                    {% for error in form.top_n.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                
+                <div class="col-md-3 d-flex align-items-end">
+                    {{ form.submit(class="btn btn-primary w-100") }}
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- 销售排行图表 -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">菜品{{ "销售额" if chart_type == "sales" else "销量" }}排行</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="position: relative; height: 350px;">
+                    <canvas id="salesChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 销售趋势图表 -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">近7天销售趋势</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="position: relative; height: 300px;">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- 销售统计 -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">销售统计</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        总销售额
+                        <span class="badge bg-success rounded-pill">¥{{ "%.2f"|format(restaurant.total_sales or 0) }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        总订单数
+                        <span class="badge bg-primary rounded-pill">{{ total_orders }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        在售菜品
+                        <span class="badge bg-info rounded-pill">{{ active_dishes }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        顾客总数
+                        <span class="badge bg-warning rounded-pill">{{ total_customers }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 热门分类 -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">热门分类</h5>
+            </div>
+            <div class="card-body">
+                {% for category_name, sales in category_sales %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>{{ category_name }}</span>
+                        <span class="text-success">¥{{ "%.2f"|format(sales or 0) }}</span>
+                    </div>
+                    {% if category_sales %}
+                        {% set max_sales = category_sales[0][1] if category_sales[0][1] > 0 else 1 %}
+                        {% set width = ((sales or 0) / max_sales * 100) if max_sales > 0 else 0 %}
+                        <div class="progress" style="height: 8px;">
+                            <!-- 使用 data-width 属性避免 CSS 验证错误 -->
+                            <div class="progress-bar" role="progressbar" data-width="{{ width }}"></div>
+                        </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center">暂无销售数据</p>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- 时间周期说明 -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6>统计周期说明</h6>
+                <ul class="text-muted small">
+                    <li><strong>今日</strong>: 从今天00:00开始</li>
+                    <li><strong>本周</strong>: 从本周一开始</li>
+                    <li><strong>本月</strong>: 从本月1日开始</li>
+                    <li><strong>今年</strong>: 从今年1月1日开始</li>
+                    <li><strong>全部</strong>: 所有时间</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 数据表格 -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">详细数据</h5>
+    </div>
+    <div class="card-body">
+        {% if dish_stats %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>菜品名称</th>
+                        <th>分类</th>
+                        <th>销量</th>
+                        <th>销售额</th>
+                        <th>平均单价</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dish_stat in dish_stats %}
+                    {% set i = loop.index %}
+                    {% set dish_name = dish_stat[0] %}
+                    {% set category_id = dish_stat[1] %}
+                    {% set quantity = dish_stat[2] %}
+                    {% set sales = dish_stat[3] %}
+                    {% set category_name = category_dict.get(category_id, '未知') %}
+                    <tr>
+                        <td>
+                            <span class="badge {% if i == 1 %}bg-warning{% elif i == 2 %}bg-secondary{% elif i == 3 %}bg-danger{% else %}bg-light text-dark{% endif %}">
+                                {{ i }}
+                            </span>
+                        </td>
+                        <td>{{ dish_name }}</td>
+                        <td>
+                            <span class="badge bg-info">{{ category_name }}</span>
+                        </td>
+                        <td>{{ quantity or 0 }} 份</td>
+                        <td class="text-success">¥{{ "%.2f"|format(sales or 0) }}</td>
+                        <td>
+                            {% if quantity and quantity > 0 %}
+                            ¥{{ "%.2f"|format((sales or 0) / quantity) }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center">暂无销售数据</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 隐藏的数据容器，添加 chart_type 和 dish_stats -->
+<div id="chartData" 
+     data-labels="{{ labels }}" 
+     data-data="{{ data }}"
+     data-trend-labels="{{ trend_labels }}"
+     data-trend-data="{{ trend_data }}"
+     data-chart-label="{{ chart_label }}"
+     data-chart-type="{{ chart_type }}"
+     data-dish-stats='{{ dish_stats|tojson|safe }}'
+     style="display: none;">
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- 引入 Chart.js 数据标签插件 -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<script>
+// 注册数据标签插件
+Chart.register(ChartDataLabels);
+
+// 从隐藏元素获取数据
+document.addEventListener('DOMContentLoaded', function() {
+    const chartData = document.getElementById('chartData');
+    if (!chartData) return;
+    
+    try {
+        // 解析JSON数据
+        const labels = JSON.parse(chartData.dataset.labels || '[]');
+        const data = JSON.parse(chartData.dataset.data || '[]');
+        const trendLabels = JSON.parse(chartData.dataset.trendLabels || '[]');
+        const trendData = JSON.parse(chartData.dataset.trendData || '[]');
+        const chartLabel = chartData.dataset.chartLabel || '销售额 (元)';
+        const chartType = chartData.dataset.chartType || 'sales';
+        
+        // 解析菜品统计数据
+        let dishStats = [];
+        try {
+            dishStats = JSON.parse(chartData.dataset.dishStats || '[]');
+        } catch (e) {
+            console.warn('解析dishStats失败:', e);
+        }
+        
+        // 菜品销售排行图表
+        const salesCtx = document.getElementById('salesChart');
+        if (salesCtx && labels.length > 0 && data.length > 0) {
+            // 计算总数用于百分比显示
+            const total = data.reduce((a, b) => a + b, 0);
+            
+            // 定义颜色数组
+            const backgroundColors = [
+                '#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', 
+                '#9966ff', '#ff9f40', '#c9cbcf', '#f7464a',
+                '#46bfbd', '#fdb45c', '#949fb1', '#4d5360'
+            ];
+            
+            new Chart(salesCtx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: backgroundColors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                padding: 20,
+                                font: {
+                                    size: 12
+                                },
+                                generateLabels: function(chart) {
+                                    const data = chart.data;
+                                    if (data.labels.length && data.datasets.length) {
+                                        return data.labels.map((label, i) => {
+                                            const value = data.datasets[0].data[i];
+                                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                            
+                                            return {
+                                                text: `${label}: ${chartType === 'sales' ? '¥' + value.toFixed(2) : value + ' 份'} (${percentage}%)`,
+                                                fillStyle: data.datasets[0].backgroundColor[i],
+                                                strokeStyle: '#000',
+                                                lineWidth: 1,
+                                                hidden: false,
+                                                index: i
+                                            };
+                                        });
+                                    }
+                                    return [];
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: chartLabel + ' 排行',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            },
+                            padding: {
+                                top: 10,
+                                bottom: 20
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                    
+                                    // 获取当前菜品的详细统计
+                                    const index = context.dataIndex;
+                                    let quantity = 0;
+                                    let sales = 0;
+                                    if (dishStats[index]) {
+                                        quantity = dishStats[index][2] || 0;
+                                        sales = dishStats[index][3] || 0;
+                                    }
+                                    
+                                    if (chartType === 'sales') {
+                                        return [
+                                            `${label}`,
+                                            `销售额: ¥${value.toFixed(2)} (${percentage}%)`,
+                                            `销量: ${quantity} 份`,
+                                            `占总销售额: ${percentage}%`
+                                        ];
+                                    } else {
+                                        return [
+                                            `${label}`,
+                                            `销量: ${value} 份 (${percentage}%)`,
+                                            `销售额: ¥${sales.toFixed(2)}`,
+                                            `占总销量: ${percentage}%`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        // 数据标签配置
+                        datalabels: {
+                            color: '#fff',
+                            font: {
+                                weight: 'bold',
+                                size: 12
+                            },
+                            formatter: function(value, context) {
+                                // 获取百分比
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                
+                                if (chartType === 'sales') {
+                                    // 如果是销售额，显示简化的数值
+                                    if (value >= 1000) {
+                                        return '¥' + (value/1000).toFixed(1) + 'k';
+                                    } else {
+                                        return '¥' + value.toFixed(0);
+                                    }
+                                } else {
+                                    // 如果是销量，直接显示数值
+                                    return value;
+                                }
+                            },
+                            anchor: 'center',
+                            align: 'center',
+                            offset: 0
+                        }
+                    },
+                    // 饼图半径设置
+                    radius: '70%',
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+        } else if (salesCtx) {
+            // 如果没有数据，显示提示
+            salesCtx.innerHTML = '<div class="text-center p-5"><i class="bi bi-bar-chart display-1 text-muted"></i><p class="mt-3">暂无销售数据</p></div>';
+        }
+        
+        // 销售趋势图表
+        const trendCtx = document.getElementById('trendChart');
+        if (trendCtx && trendLabels.length > 0 && trendData.length > 0) {
+            new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: trendLabels,
+                    datasets: [{
+                        label: '销售额 (元)',
+                        data: trendData,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        title: {
+                            display: true,
+                            text: '近7天销售趋势',
+                            font: {
+                                size: 16
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } else if (trendCtx) {
+            // 如果没有数据，显示提示
+            trendCtx.innerHTML = '<div class="text-center p-5"><i class="bi bi-graph-up display-1 text-muted"></i><p class="mt-3">暂无趋势数据</p></div>';
+        }
+        
+        // 设置进度条宽度
+        document.querySelectorAll('.progress-bar[data-width]').forEach(function(bar) {
+            const width = bar.getAttribute('data-width');
+            if (width && !isNaN(width)) {
+                bar.style.width = width + '%';
+            }
+        });
+    } catch (error) {
+        console.error('图表初始化失败:', error);
+    }
+});
+
+// 导出功能
+function exportData() {
+    alert('导出功能开发中...');
+}
+</script>
+{% endblock %}

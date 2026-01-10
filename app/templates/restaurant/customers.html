@@ -1,0 +1,286 @@
+{% extends "restaurant/base.html" %}
+
+{% block restaurant_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>顾客管理</h2>
+    <div>
+        <span class="badge bg-secondary">{{ customers.total }} 位顾客</span>
+    </div>
+</div>
+
+<!-- 排序筛选 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h6>排序方式：</h6>
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('restaurant.customers', restaurant_id=restaurant.id, sort_by='total_spent', page=1) }}" 
+               class="btn btn-outline-secondary {% if sort_by == 'total_spent' %}active{% endif %}">
+                按消费额排序
+            </a>
+            <a href="{{ url_for('restaurant.customers', restaurant_id=restaurant.id, sort_by='order_count', page=1) }}" 
+               class="btn btn-outline-secondary {% if sort_by == 'order_count' %}active{% endif %}">
+                按订单数排序
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- 顾客列表 -->
+<div class="card">
+    <div class="card-body">
+        {% if customers.items %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>顾客</th>
+                        <th>消费总额</th>
+                        <th>订单数</th>
+                        <th>最后消费</th>
+                        <th>订单状态统计</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer_data in customers.items %}
+                    {% set customer = customer_data[0] %}
+                    {% set order_count = customer_data[1] %}
+                    {% set total_spent = customer_data[2] %}
+                    {% set last_order_date = customer_last_orders.get(customer.id) %}
+                    {% set status_stats = customer_order_stats.get(customer.id, {}) %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <img src="{{ url_for('static', filename='uploads/avatars/' + customer.avatar_path) }}" 
+                                     alt="头像" class="rounded-circle me-2" width="40" height="40">
+                                <div>
+                                    <strong>{{ customer.username }}</strong>
+                                    <div class="text-muted small">{{ customer.email }}</div>
+                                    {% if customer.id in blacklist_user_ids %}
+                                    <span class="badge bg-danger mt-1">黑名单</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <strong class="text-success">¥{{ "%.2f"|format(total_spent) }}</strong>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary">{{ order_count }} 单</span>
+                        </td>
+                        <td>
+                            {% if last_order_date %}
+                            <small>{{ last_order_date.strftime('%Y-%m-%d') }}</small>
+                            {% else %}
+                            <small class="text-muted">-</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if status_stats %}
+                            <div class="d-flex flex-wrap gap-1">
+                                {% for status, count in status_stats.items() %}
+                                {% if status in ['pending', 'paid', 'completed', 'cancelled'] and count > 0 %}
+                                <span class="badge 
+                                    {% if status == 'pending' %}bg-warning
+                                    {% elif status == 'paid' %}bg-info
+                                    {% elif status == 'completed' %}bg-success
+                                    {% elif status == 'cancelled' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {% if status == 'pending' %}待支付
+                                    {% elif status == 'paid' %}已支付
+                                    {% elif status == 'completed' %}已完成
+                                    {% elif status == 'cancelled' %}已取消
+                                    {% else %}{{ status }}{% endif %}: {{ count }}
+                                </span>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <small class="text-muted">无订单</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('restaurant.customer_detail', restaurant_id=restaurant.id, customer_id=customer.id) }}" 
+                               class="btn btn-sm btn-outline-info mb-1">
+                                <i class="bi bi-eye"></i> 详情
+                            </a>
+                            {% if customer.id in blacklist_user_ids %}
+                            <form action="{{ url_for('restaurant.remove_from_blacklist', restaurant_id=restaurant.id) }}" 
+                                  method="POST" class="d-inline">
+                                <input type="hidden" name="user_id" value="{{ customer.id }}">
+                                <button type="submit" class="btn btn-sm btn-outline-success mb-1">
+                                    <i class="bi bi-person-check"></i> 移出黑名单
+                                </button>
+                            </form>
+                            {% else %}
+                            <button type="button" class="btn btn-sm btn-outline-warning mb-1 add-to-blacklist" 
+                                    data-user-id="{{ customer.id }}" 
+                                    data-username="{{ customer.username }}">
+                                <i class="bi bi-person-x"></i> 加入黑名单
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        {% if customers.pages > 1 %}
+        <nav aria-label="顾客分页" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if customers.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" 
+                       href="{{ url_for('restaurant.customers', restaurant_id=restaurant.id, page=customers.prev_num, sort_by=sort_by) }}">
+                        上一页
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">上一页</span>
+                </li>
+                {% endif %}
+                
+                {% for page_num in customers.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num == customers.page %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" 
+                               href="{{ url_for('restaurant.customers', restaurant_id=restaurant.id, page=page_num, sort_by=sort_by) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if customers.has_next %}
+                <li class="page-item">
+                    <a class="page-link" 
+                       href="{{ url_for('restaurant.customers', restaurant_id=restaurant.id, page=customers.next_num, sort_by=sort_by) }}">
+                        下一页
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">下一页</span>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-people display-1 text-muted"></i>
+            <h4 class="mt-3">暂无顾客</h4>
+            <p class="text-muted">还没有任何顾客消费记录</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 消费统计 -->
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h2 class="text-primary">{{ customers.total }}</h2>
+                <p class="text-muted mb-0">总顾客数</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                {% set total_orders = 0 %}
+                {% for customer_data in customers.items %}
+                {% set order_count = customer_data[1] %}
+                {% set total_orders = total_orders + order_count %}
+                {% endfor %}
+                <h2 class="text-success">{{ total_orders }}</h2>
+                <p class="text-muted mb-0">总订单数</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                {% set total_spent_sum = 0 %}
+                {% for customer_data in customers.items %}
+                {% set total_spent = customer_data[2] %}
+                {% set total_spent_sum = total_spent_sum + total_spent %}
+                {% endfor %}
+                {% set avg_spent = total_spent_sum / customers.total if customers.total > 0 else 0 %}
+                <h2 class="text-warning">¥{{ "%.2f"|format(avg_spent) }}</h2>
+                <p class="text-muted mb-0">客单价</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 加入黑名单模态框 -->
+<div class="modal fade" id="blacklistModal" tabindex="-1" aria-labelledby="blacklistModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('restaurant.add_to_blacklist', restaurant_id=restaurant.id) }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="blacklistModalLabel">加入黑名单</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="user_id" id="blacklistUserId">
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">原因说明（可选）</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="3" 
+                                  placeholder="请输入将该用户加入黑名单的原因"></textarea>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        确定要将用户 <span id="blacklistUsername" class="fw-bold"></span> 加入黑名单吗？
+                        加入后该用户将无法下单。
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-warning">确认加入</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 加入黑名单按钮
+    const addBlacklistButtons = document.querySelectorAll('.add-to-blacklist');
+    const blacklistModal = new bootstrap.Modal(document.getElementById('blacklistModal'));
+    const blacklistUserId = document.getElementById('blacklistUserId');
+    const blacklistUsername = document.getElementById('blacklistUsername');
+    
+    addBlacklistButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.dataset.userId;
+            const username = this.dataset.username;
+            
+            blacklistUserId.value = userId;
+            blacklistUsername.textContent = username;
+            
+            blacklistModal.show();
+        });
+    });
+});
+</script>
+{% endblock %}

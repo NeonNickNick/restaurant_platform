@@ -1,0 +1,122 @@
+{% extends "restaurant/base.html" %}
+
+{% block restaurant_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0"><i class="bi bi-plus-circle"></i> 添加菜品</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="" enctype="multipart/form-data" novalidate>
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="请输入菜品名称") }}
+                            {% for error in form.name.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.category_id.label(class="form-label") }}
+                            {{ form.category_id(class="form-select" + (" is-invalid" if form.category_id.errors else "")) }}
+                            {% for error in form.category_id.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), rows=4, placeholder="请输入菜品介绍，最多500字") }}
+                        {% for error in form.description.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">
+                            <span id="char-count">0</span>/500 字
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.price.label(class="form-label") }}
+                            <div class="input-group">
+                                <span class="input-group-text">¥</span>
+                                {{ form.price(class="form-control" + (" is-invalid" if form.price.errors else ""), placeholder="0.00") }}
+                                {% for error in form.price.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="form-text">请输入价格，支持小数</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.image.label(class="form-label") }}
+                            {{ form.image(class="form-control" + (" is-invalid" if form.image.errors else "")) }}
+                            {% for error in form.image.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">图片将被自动缩放为100x100像素</div>
+                            
+                            <!-- 图片预览 -->
+                            <div id="image-preview" class="mt-2 text-center" style="display: none;">
+                                <img id="preview" src="#" alt="图片预览" class="img-fluid rounded" style="max-height: 150px;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{{ url_for('restaurant.dishes', restaurant_id=restaurant.id) }}" 
+                           class="btn btn-secondary me-md-2">取消</a>
+                        {{ form.submit(class="btn btn-success") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-body">
+                <h6>添加菜品注意事项：</h6>
+                <ul class="text-muted small">
+                    <li>菜品图片建议尺寸为正方形，将被自动缩放为100x100像素</li>
+                    <li>菜品介绍最多500字，请简洁明了</li>
+                    <li>价格请填写准确，顾客点餐时将按此价格计算</li>
+                    <li>菜品添加后默认处于"上架"状态，可以在菜品列表中下架</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 字数统计
+    document.getElementById('description').addEventListener('input', function() {
+        document.getElementById('char-count').textContent = this.value.length;
+    });
+    
+    // 图片预览
+    document.getElementById('image').addEventListener('change', function() {
+        const preview = document.getElementById('preview');
+        const previewDiv = document.getElementById('image-preview');
+        const file = this.files[0];
+        
+        if (file) {
+            const reader = new FileReader();
+            
+            reader.addEventListener('load', function() {
+                preview.src = reader.result;
+                previewDiv.style.display = 'block';
+            });
+            
+            reader.readAsDataURL(file);
+        } else {
+            previewDiv.style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

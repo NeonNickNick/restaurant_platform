@@ -1,0 +1,366 @@
+{% extends "restaurant/base.html" %}
+
+{% block restaurant_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>智能经营顾问</h2>
+    <div>
+        {% if used_ai %}
+        <span class="badge bg-success me-2">AI增强</span>
+        {% endif %}
+        <span class="badge bg-info">实时数据</span>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- 提问表单 -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">提问</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="" novalidate>
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.question.label(class="form-label") }}
+                        {{ form.question(class="form-control" + (" is-invalid" if form.question.errors else ""), rows=4, 
+                                        placeholder="例如：哪些菜品销量最好？如何提高餐厅营业额？最近7天销售趋势如何？...") }}
+                        {% for error in form.question.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">
+                            我可以回答关于菜品销售、顾客消费、经营建议、销售趋势、菜品分析等问题
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary btn-lg") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- 回答区域 -->
+        {% if answer %}
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">顾问回答</h5>
+                <div>
+                    {% if used_ai %}
+                    <small class="text-success me-2"><i class="bi bi-robot"></i> AI增强</small>
+                    {% endif %}
+                    <small class="text-muted">{{ now.strftime('%Y-%m-%d %H:%M') }}</small>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-lightbulb"></i>
+                    <strong> 智能分析：</strong> 基于您的餐厅数据进行深度分析
+                </div>
+                
+                <div class="advisor-answer">
+                    {{ answer|replace('\n', '<br>')|safe }}
+                </div>
+                
+                <div class="mt-4 d-flex justify-content-between">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="copyAnswer()">
+                        <i class="bi bi-clipboard"></i> 复制回答
+                    </button>
+                    <small class="text-muted align-self-center">
+                        {% if used_ai %}
+                        由AI智能分析生成
+                        {% else %}
+                        基于关键词匹配生成
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 统计卡片（在回答区域下方） -->
+        <div class="row mt-4">
+            <div class="col-md-6 mb-4">
+                <div class="card border-left-primary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                    在售菜品
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ active_dishes_count }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="bi bi-egg-fried fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="card border-left-success shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    总订单数
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_orders_count }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="bi bi-receipt fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- 快速提问 -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">快速提问</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <button type="button" class="list-group-item list-group-item-action" onclick="setQuestion('哪些菜品销量最好？')">
+                        <i class="bi bi-bar-chart"></i> 哪些菜品销量最好？
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action" onclick="setQuestion('哪些顾客消费最高？')">
+                        <i class="bi bi-people"></i> 哪些顾客消费最高？
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action" onclick="setQuestion('餐厅的销售额统计')">
+                        <i class="bi bi-cash-stack"></i> 餐厅的销售额统计
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action" onclick="setQuestion('有什么经营建议？')">
+                        <i class="bi bi-lightbulb"></i> 有什么经营建议？
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action" onclick="setQuestion('如何提高餐厅营业额？')">
+                        <i class="bi bi-graph-up"></i> 如何提高餐厅营业额？
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action" onclick="setQuestion('最近7天的销售趋势如何？')">
+                        <i class="bi bi-calendar"></i> 最近7天的销售趋势
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action" onclick="setQuestion('销售额最高的是哪一天？')">
+                        <i class="bi bi-trophy"></i> 销售额最高的是哪一天？
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 功能介绍 -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">我能做什么</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        分析菜品销售数据
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        统计顾客消费情况
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        提供智能经营建议
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        分析销售趋势
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        识别热门时段
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        菜品优化建议
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        顾客偏好分析
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- 数据统计 -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">数据概览</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <h5 class="text-primary">¥{{ "%.2f"|format(restaurant.total_sales or 0) }}</h5>
+                        <small class="text-muted">总销售额</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <h5 class="text-success">{{ active_dishes_count }}</h5>
+                        <small class="text-muted">在售菜品</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <h5 class="text-warning">{{ total_orders_count }}</h5>
+                        <small class="text-muted">总订单数</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <h5 class="text-info">{{ total_customers_count }}</h5>
+                        <small class="text-muted">顾客总数</small>
+                    </div>
+                </div>
+                
+                <!-- AI状态 -->
+                <div class="mt-3 pt-3 border-top">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small text-muted">AI状态：</span>
+                        {% if used_ai %}
+                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> 已连接</span>
+                        {% else %}
+                        <span class="badge bg-warning"><i class="bi bi-exclamation-triangle"></i> 备用模式</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function setQuestion(question) {
+    const questionInput = document.getElementById('question');
+    if (questionInput) {
+        questionInput.value = question;
+        questionInput.focus();
+    }
+}
+
+function copyAnswer() {
+    const answerElement = document.querySelector('.advisor-answer');
+    if (!answerElement) {
+        alert('没有可复制的内容');
+        return;
+    }
+    
+    const answerText = answerElement.innerText;
+    
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(answerText).then(function() {
+            // 显示成功提示
+            const btn = document.querySelector('button[onclick="copyAnswer()"]');
+            if (btn) {
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-check"></i> 已复制';
+                btn.classList.remove('btn-outline-secondary');
+                btn.classList.add('btn-outline-success');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.classList.remove('btn-outline-success');
+                    btn.classList.add('btn-outline-secondary');
+                }, 2000);
+            } else {
+                alert('回答已复制到剪贴板！');
+            }
+        }).catch(function(err) {
+            console.error('复制失败: ', err);
+            fallbackCopyToClipboard(answerText);
+        });
+    } else {
+        fallbackCopyToClipboard(answerText);
+    }
+}
+
+function fallbackCopyToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    
+    // 避免屏幕闪烁
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    textArea.style.top = "-999999px";
+    document.body.appendChild(textArea);
+    
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        document.execCommand('copy');
+        alert('回答已复制到剪贴板！');
+    } catch (err) {
+        console.error('复制失败: ', err);
+        alert('复制失败，请手动选择复制');
+    }
+    
+    document.body.removeChild(textArea);
+}
+</script>
+
+<style>
+.advisor-answer {
+    line-height: 1.8;
+    white-space: pre-wrap;
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid #0dcaf0;
+    font-size: 1.05rem;
+    color: #333;
+}
+
+.advisor-answer strong {
+    color: #0d6efd;
+}
+
+/* 卡片阴影效果 */
+.card {
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    border: none;
+    border-radius: 0.35rem;
+}
+
+.card-header {
+    background-color: #f8f9fc;
+    border-bottom: 1px solid #e3e6f0;
+    font-weight: 600;
+    color: #5a5c69;
+}
+
+.list-group-item-action:hover {
+    background-color: #f8f9fa;
+    color: #0d6efd;
+}
+
+/* 统计卡片 */
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+
+.text-xs {
+    font-size: 0.8rem;
+}
+.text-gray-800 {
+    color: #5a5c69;
+}
+.text-gray-300 {
+    color: #dddfeb;
+}
+</style>
+{% endblock %}

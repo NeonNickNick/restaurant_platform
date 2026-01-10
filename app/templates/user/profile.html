@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">个人资料</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        <img src="{{ url_for('static', filename='uploads/avatars/' + current_user.avatar_path) }}" 
+                             alt="头像" class="avatar mb-3">
+                        <h5>{{ current_user.username }}</h5>
+                        <p class="text-muted">{{ current_user.email }}</p>
+                    </div>
+                    <div class="col-md-8">
+                        <table class="table">
+                            <tr>
+                                <th width="30%">用户名</th>
+                                <td>{{ current_user.username }}</td>
+                            </tr>
+                            <tr>
+                                <th>邮箱</th>
+                                <td>{{ current_user.email }}</td>
+                            </tr>
+                            <tr>
+                                <th>注册时间</th>
+                                <td>{{ current_user.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            </tr>
+                            <tr>
+                                <th>用户ID</th>
+                                <td>{{ current_user.id }}</td>
+                            </tr>
+                        </table>
+                        
+                        <div class="mt-4">
+                            <h5>账户操作</h5>
+                            <div class="btn-group">
+                                <a href="#" class="btn btn-outline-primary">修改密码</a>
+                                <a href="#" class="btn btn-outline-secondary">更换头像</a>
+                                <a href="{{ url_for('main.dashboard') }}" class="btn btn-success">进入控制面板</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

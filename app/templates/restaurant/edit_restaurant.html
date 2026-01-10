@@ -1,0 +1,91 @@
+{% extends "restaurant/base.html" %}
+
+{% block restaurant_content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">编辑餐厅信息</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="" enctype="multipart/form-data" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <!-- 当前Logo预览 -->
+                        {% if restaurant.logo_path %}
+                        <div class="text-center mb-4">
+                            <h6>当前Logo</h6>
+                            <img src="{{ url_for('static', filename='uploads/logos/' + restaurant.logo_path) }}" 
+                                 alt="{{ restaurant.name }}" 
+                                 class="img-thumbnail" 
+                                 width="150">
+                        </div>
+                        {% endif %}
+                        
+                        <!-- 餐厅名称 -->
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), value=restaurant.name) }}
+                            {% for error in form.name.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- 餐厅描述 -->
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), rows=4) }}
+                            {% for error in form.description.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">如果不填写，将显示"暂无描述"</div>
+                        </div>
+                        
+                        <!-- Logo上传 -->
+                        <div class="mb-3">
+                            {{ form.logo.label(class="form-label") }}
+                            {{ form.logo(class="form-control" + (" is-invalid" if form.logo.errors else "")) }}
+                            {% for error in form.logo.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">
+                                支持 JPG, PNG, GIF 格式，建议尺寸 200×200 像素<br>
+                                如果不选择新文件，将保留当前Logo
+                            </div>
+                        </div>
+                        
+                        <!-- 操作按钮 -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('restaurant.dashboard', restaurant_id=restaurant.id) }}" 
+                               class="btn btn-outline-secondary me-md-2">
+                                取消
+                            </a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Logo预览功能
+document.getElementById('logo')?.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.querySelector('.img-thumbnail');
+            if (preview) {
+                preview.src = e.target.result;
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "restaurant/base.html" %}
+
+{% block restaurant_content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-tag"></i> 编辑分类</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="" novalidate>
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.name.label(class="form-label") }}
+                        {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                        {% for error in form.name.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">分类名称将在菜品分类和点餐界面显示</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('restaurant.categories', restaurant_id=restaurant.id) }}" 
+                           class="btn btn-secondary me-md-2">取消</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-body">
+                <h6>注意事项：</h6>
+                <ul class="text-muted small">
+                    <li>修改分类名称会影响已分类的菜品</li>
+                    <li>建议不要频繁修改分类名称</li>
+                    <li>如需删除分类，请确保该分类下没有菜品</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

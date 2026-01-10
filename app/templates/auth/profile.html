@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- 页面标题 -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>个人资料</h2>
+                {% if current_user.restaurant %}
+                <a href="{{ url_for('restaurant.dashboard', restaurant_id=current_user.restaurant.id) }}" 
+                   class="btn btn-primary">
+                    <i class="bi bi-speedometer2"></i> 进入控制面板
+                </a>
+                {% endif %}
+            </div>
+            
+            <!-- 用户信息卡片 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <!-- 左侧：头像显示区域 -->
+                        <div class="col-md-4 text-center">
+                            <div class="mb-3">
+                                <img src="{{ url_for('static', filename='uploads/avatars/' + current_user.avatar_path) }}" 
+                                     alt="{{ current_user.username }}" 
+                                     class="rounded-circle img-thumbnail" 
+                                     width="150" height="150"
+                                     style="object-fit: cover;">
+                            </div>
+                            
+                            <!-- 更换头像表单 -->
+                            <div class="mb-4">
+                                <h6>更换头像</h6>
+                                <form method="POST" action="{{ url_for('auth.profile') }}" enctype="multipart/form-data" id="avatarForm">
+                                    {{ change_avatar_form.hidden_tag() }}
+                                    
+                                    <div class="mb-2">
+                                        {{ change_avatar_form.avatar(class="form-control form-control-sm") }}
+                                        {% for error in change_avatar_form.avatar.errors %}
+                                        <div class="text-danger small">{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                    
+                                    {{ change_avatar_form.submit(class="btn btn-sm btn-outline-primary w-100") }}
+                                </form>
+                            </div>
+                            
+                            <div class="small text-muted">
+                                支持 JPG, PNG, GIF 格式<br>
+                                建议尺寸: 150×150 像素
+                            </div>
+                        </div>
+                        
+                        <!-- 右侧：用户信息 -->
+                        <div class="col-md-8">
+                            <h4 class="mb-3">{{ current_user.username }}</h4>
+                            <p class="text-muted mb-4">
+                                <i class="bi bi-envelope"></i> {{ current_user.email }}
+                            </p>
+                            
+                            <!-- 修改用户名表单 -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0">修改用户名</h6>
+                                </div>
+                                <div class="card-body">
+                                    <form method="POST" action="{{ url_for('auth.profile') }}" id="usernameForm">
+                                        {{ change_username_form.hidden_tag() }}
+                                        
+                                        <div class="mb-3">
+                                            {{ change_username_form.new_username.label(class="form-label") }}
+                                            {{ change_username_form.new_username(class="form-control" + (" is-invalid" if change_username_form.new_username.errors else ""), value=current_user.username) }}
+                                            {% for error in change_username_form.new_username.errors %}
+                                            <div class="invalid-feedback">{{ error }}</div>
+                                            {% endfor %}
+                                            <small class="form-text text-muted">用户名长度应为3-20个字符</small>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            {{ change_username_form.password.label(class="form-label") }}
+                                            {{ change_username_form.password(class="form-control" + (" is-invalid" if change_username_form.password.errors else "")) }}
+                                            {% for error in change_username_form.password.errors %}
+                                            <div class="invalid-feedback">{{ error }}</div>
+                                            {% endfor %}
+                                            <small class="form-text text-muted">请输入当前密码以验证身份</small>
+                                        </div>
+                                        
+                                        {{ change_username_form.submit(class="btn btn-warning") }}
+                                    </form>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-muted">用户名</h6>
+                                            <p class="card-text">{{ current_user.username }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-muted">邮箱</h6>
+                                            <p class="card-text">{{ current_user.email }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-muted">注册时间</h6>
+                                            <p class="card-text">
+                                                {{ current_user.created_at.strftime('%Y-%m-%d %H:%M:%S') if current_user.created_at else '未知' }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-muted">用户ID</h6>
+                                            <p class="card-text">#{{ current_user.id }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 账户操作 -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">账户操作</h5>
+                                </div>
+                                <div class="card-body">
+                                    <!-- 修改密码表单 -->
+                                    <div class="mb-4">
+                                        <h6>修改密码</h6>
+                                        <form method="POST" action="{{ url_for('auth.profile') }}" id="passwordForm">
+                                            {{ change_password_form.hidden_tag() }}
+                                            
+                                            <div class="mb-3">
+                                                {{ change_password_form.current_password.label(class="form-label") }}
+                                                {{ change_password_form.current_password(class="form-control" + (" is-invalid" if change_password_form.current_password.errors else "")) }}
+                                                {% for error in change_password_form.current_password.errors %}
+                                                <div class="invalid-feedback">{{ error }}</div>
+                                                {% endfor %}
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                {{ change_password_form.new_password.label(class="form-label") }}
+                                                {{ change_password_form.new_password(class="form-control" + (" is-invalid" if change_password_form.new_password.errors else "")) }}
+                                                {% for error in change_password_form.new_password.errors %}
+                                                <div class="invalid-feedback">{{ error }}</div>
+                                                {% endfor %}
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                {{ change_password_form.confirm_password.label(class="form-label") }}
+                                                {{ change_password_form.confirm_password(class="form-control" + (" is-invalid" if change_password_form.confirm_password.errors else "")) }}
+                                                {% for error in change_password_form.confirm_password.errors %}
+                                                <div class="invalid-feedback">{{ error }}</div>
+                                                {% endfor %}
+                                            </div>
+                                            
+                                            {{ change_password_form.submit(class="btn btn-primary") }}
+                                        </form>
+                                    </div>
+                                    
+                                    <!-- 其他操作 -->
+                                    <div class="border-top pt-3">
+                                        <h6>其他操作</h6>
+                                        <div class="d-grid gap-2">
+                                            {% if current_user.restaurant %}
+                                            <a href="{{ url_for('restaurant.dashboard', restaurant_id=current_user.restaurant.id) }}" 
+                                               class="btn btn-outline-primary">
+                                                <i class="bi bi-speedometer2"></i> 进入控制面板
+                                            </a>
+                                            {% else %}
+                                            <a href="{{ url_for('restaurant.create') }}" 
+                                               class="btn btn-outline-success">
+                                                <i class="bi bi-plus-circle"></i> 创建餐厅
+                                            </a>
+                                            {% endif %}
+                                            
+                                            <a href="{{ url_for('main.index') }}" 
+                                               class="btn btn-outline-secondary">
+                                                <i class="bi bi-house"></i> 返回首页
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 用户统计信息 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">账户统计</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        {% if current_user.restaurant %}
+                        <div class="col-4">
+                            <h5 class="text-primary">
+                                {{ stats.active_dishes_count if stats else 0 }}
+                            </h5>
+                            <small class="text-muted">在售菜品</small>
+                        </div>
+                        <div class="col-4">
+                            <h5 class="text-success">
+                                {{ stats.paid_orders_count if stats else 0 }}
+                            </h5>
+                            <small class="text-muted">已处理订单</small>
+                        </div>
+                        <div class="col-4">
+                            <h5 class="text-warning">
+                                ¥{{ "%.2f"|format(stats.total_sales if stats else 0) }}
+                            </h5>
+                            <small class="text-muted">餐厅销售额</small>
+                        </div>
+                        {% else %}
+                        <div class="col-12 text-center py-3">
+                            <i class="bi bi-shop display-1 text-muted"></i>
+                            <h5 class="mt-3">您还没有创建餐厅</h5>
+                            <p class="text-muted">创建餐厅后可以管理菜品、处理订单、查看报表</p>
+                            <a href="{{ url_for('restaurant.create') }}" class="btn btn-primary">
+                                <i class="bi bi-plus-circle"></i> 创建餐厅
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 最后登录时间 -->
+            <div class="card">
+                <div class="card-body text-center text-muted small">
+                    <p class="mb-0">
+                        <i class="bi bi-clock"></i> 
+                        上次登录时间: 
+                        {% if current_user.last_seen %}
+                        {{ current_user.last_seen.strftime('%Y-%m-%d %H:%M:%S') }}
+                        {% else %}
+                        首次登录
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 头像上传预览
+document.getElementById('avatar')?.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.querySelector('.img-thumbnail').src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// 修改密码表单验证
+document.getElementById('passwordForm')?.addEventListener('submit', function(e) {
+    const newPassword = document.getElementById('new_password').value;
+    const confirmPassword = document.getElementById('confirm_password').value;
+    
+    if (newPassword !== confirmPassword) {
+        e.preventDefault();
+        alert('两次输入的新密码不一致！');
+        return false;
+    }
+    
+    if (newPassword.length < 6) {
+        e.preventDefault();
+        alert('密码长度至少6位！');
+        return false;
+    }
+    
+    return confirm('确定要修改密码吗？');
+});
+
+// 修改用户名表单验证
+document.getElementById('usernameForm')?.addEventListener('submit', function(e) {
+    const newUsername = document.getElementById('new_username').value;
+    
+    if (newUsername.length < 3 || newUsername.length > 20) {
+        e.preventDefault();
+        alert('用户名长度应为3-20个字符！');
+        return false;
+    }
+    
+    return confirm('确定要修改用户名吗？');
+});
+
+// 头像上传表单验证
+document.getElementById('avatarForm')?.addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('avatar');
+    if (!fileInput || !fileInput.value) {
+        e.preventDefault();
+        alert('请选择要上传的头像文件！');
+        return false;
+    }
+    
+    const allowedExtensions = /(\.jpg|\.jpeg|\.png|\.gif)$/i;
+    if (!allowedExtensions.exec(fileInput.value)) {
+        e.preventDefault();
+        alert('只允许上传JPG、JPEG、PNG、GIF格式的图片！');
+        return false;
+    }
+    
+    return confirm('确定要更换头像吗？');
+});
+</script>
+{% endblock %}

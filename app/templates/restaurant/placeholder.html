@@ -1,0 +1,24 @@
+{% extends "restaurant/base.html" %}
+
+{% block restaurant_content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="card">
+                <div class="card-body py-5">
+                    <i class="bi bi-tools display-1 text-warning mb-4"></i>
+                    <h2 class="mb-3">{{ message }}</h2>
+                    <p class="text-muted mb-4">我们正在努力开发此功能，敬请期待！</p>
+                    
+                    <div class="d-flex justify-content-center mt-4">
+                        <a href="{{ url_for('restaurant.dashboard', restaurant_id=restaurant.id) }}" 
+                           class="btn btn-primary">
+                            <i class="bi bi-arrow-left"></i> 返回仪表板
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

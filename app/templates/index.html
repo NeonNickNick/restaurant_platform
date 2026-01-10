@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - 餐厅点餐平台{% endblock %}
+
+{% block content %}
+<div class="jumbotron jumbotron-fluid bg-light py-5">
+    <div class="container text-center">
+        <h1 class="display-4 mb-3">欢迎来到餐厅点餐平台</h1>
+        <p class="lead">一个集餐厅管理、在线点餐于一体的综合平台</p>
+        
+        {% if current_user.is_authenticated %}
+        <p class="lead">欢迎回来，{{ current_user.username }}！</p>
+        {% endif %}
+        
+        <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+            <!-- 我要点餐按钮 - 根据登录状态显示 -->
+            {% if current_user.is_authenticated %}
+                <!-- 已登录用户显示实际点餐链接 -->
+                <a href="{{ url_for('main.restaurants') }}" 
+                   class="btn btn-primary btn-lg px-4 me-md-2">
+                    <i class="bi bi-cart"></i> 我要点餐
+                </a>
+            {% else %}
+                <!-- 未登录用户显示提示 -->
+                <button onclick="alert('请先登录以使用点餐功能'); window.location.href='{{ url_for('auth.login') }}';" 
+                        class="btn btn-primary btn-lg px-4 me-md-2">
+                    <i class="bi bi-cart"></i> 我要点餐
+                </button>
+            {% endif %}
+            
+            <!-- 管理餐厅按钮 - 根据用户状态显示不同内容 -->
+            {% if current_user.is_authenticated %}
+                {% if current_user.restaurant %}
+                    <!-- 用户已有餐厅，显示管理餐厅 -->
+                    <a href="{{ url_for('restaurant.dashboard', restaurant_id=current_user.restaurant.id) }}" 
+                       class="btn btn-success btn-lg px-4">
+                        <i class="bi bi-shop"></i> 管理餐厅
+                    </a>
+                {% else %}
+                    <!-- 用户没有餐厅，显示创建餐厅 -->
+                    <a href="{{ url_for('restaurant.create') }}" 
+                       class="btn btn-success btn-lg px-4">
+                        <i class="bi bi-plus-circle"></i> 创建餐厅
+                    </a>
+                {% endif %}
+            {% else %}
+                <!-- 用户未登录，显示登录按钮 -->
+                <a href="{{ url_for('auth.login') }}" 
+                   class="btn btn-success btn-lg px-4">
+                    <i class="bi bi-box-arrow-in-right"></i> 登录管理
+                </a>
+            {% endif %}
+        </div>
+        
+        <!-- 快速访问（登录用户显示） -->
+        {% if current_user.is_authenticated %}
+        <div class="mt-4">
+            <div class="row justify-content-center">
+                <div class="col-auto">
+                    <a href="{{ url_for('main.my_table') }}" 
+                       class="btn btn-outline-primary position-relative">
+                        <i class="bi bi-cart3"></i> 我的餐桌
+                        {% if session.get('cart') %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            {{ session.cart.values()|sum(attribute='quantity') }}
+                        </span>
+                        {% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <i class="bi bi-egg-fried display-4 text-primary mb-3"></i>
+                    <h5 class="card-title">丰富菜品</h5>
+                    <p class="card-text">众多餐厅提供各式各样的美食，满足您的不同口味。</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <i class="bi bi-truck display-4 text-success mb-3"></i>
+                    <h5 class="card-title">快速配送</h5>
+                    <p class="card-text">高效配送服务，让您的美食快速送达。</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <i class="bi bi-shield-check display-4 text-warning mb-3"></i>
+                    <h5 class="card-title">安全支付</h5>
+                    <p class="card-text">多种安全支付方式，保障您的交易安全。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">顾客功能</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            浏览餐厅菜品
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            在线下单点餐
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            查看订单状态
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            管理个人资料
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            智能菜品咨询
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">餐厅管理功能</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            创建和管理餐厅
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            管理菜品和分类
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            处理顾客订单
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            查看经营数据报表
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            智能经营顾问
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新功能介绍 -->
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-header bg-info text-white">
+            <h4 class="mb-0">🚀 全新点餐功能上线！</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 text-center mb-3">
+                    <i class="bi bi-shop-window display-4 text-primary"></i>
+                    <h5 class="mt-3">浏览餐厅</h5>
+                    <p class="text-muted">按销售额排序，发现热门餐厅</p>
+                </div>
+                <div class="col-md-4 text-center mb-3">
+                    <i class="bi bi-egg-fried display-4 text-success"></i>
+                    <h5 class="mt-3">在线点餐</h5>
+                    <p class="text-muted">查看菜品详情，一键加入餐桌</p>
+                </div>
+                <div class="col-md-4 text-center mb-3">
+                    <i class="bi bi-chat-dots display-4 text-warning"></i>
+                    <h5 class="mt-3">智能咨询</h5>
+                    <p class="text-muted">AI助手解答菜品相关问题</p>
+                </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('main.restaurants') }}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-rocket-takeoff"></i> 立即体验点餐功能
+                </a>
+                {% else %}
+                <a href="{{ url_for('auth.register') }}" class="btn btn-success btn-lg me-2">立即注册</a>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary btn-lg">立即登录</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="text-center mt-5 mb-5">
+    <h3>立即加入我们</h3>
+    <p class="text-muted">无论您是顾客还是餐厅经营者，这里都有您需要的功能</p>
+    <div class="mt-3">
+        <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary me-2">立即注册</a>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">立即登录</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 简单的页面加载完成提示
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('餐厅点餐平台首页加载完成');
+    
+    // 检查按钮状态
+    const manageBtn = document.querySelector('.btn-success');
+    if (manageBtn && manageBtn.textContent.includes('管理餐厅')) {
+        manageBtn.addEventListener('click', function() {
+            console.log('跳转到餐厅管理:', this.href);
+        });
+    }
+    
+    // 为未登录用户的点餐按钮添加点击事件
+    const orderBtn = document.querySelector('.btn-primary[onclick]');
+    if (orderBtn) {
+        orderBtn.addEventListener('click', function(e) {
+            if (!this.classList.contains('disabled')) {
+                console.log('未登录用户尝试点餐，提示登录');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
