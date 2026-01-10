@@ -7,6 +7,14 @@ from sqlalchemy import desc
 
 main_bp = Blueprint('main', __name__)
 
+@main_bp.route('/api/clear-cart', methods=['POST'])
+@login_required
+def clear_cart():
+    """清空购物车"""
+    session['cart'] = {}
+    session.modified = True
+    return jsonify({'success': True, 'message': '购物车已清空'})
+
 @main_bp.route('/')
 @main_bp.route('/index')
 def index():

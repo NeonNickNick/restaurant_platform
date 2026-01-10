@@ -668,116 +668,96 @@ def customers(restaurant_id):
     """顾客管理"""
     restaurant = Restaurant.query.get_or_404(restaurant_id)
     
-    # 获取排序和分页参数
+    # 获取排序参数
     sort_by = request.args.get('sort_by', 'total_spent')
     page = request.args.get('page', 1, type=int)
-    per_page = 20
     
-    # 查询在该餐厅有过订单的所有顾客
-    from sqlalchemy import func
-    
-    # 构建基础查询
-    query = db.session.query(
-        User,
-        func.count(Order.id).label('order_count'),
-        func.sum(Order.total_amount).label('total_spent')
-    ).join(
-        Order, User.id == Order.user_id
-    ).filter(
-        Order.restaurant_id == restaurant_id
-    ).group_by(
-        User.id
-    )
-    
-    # 排序
-    if sort_by == 'total_spent':
-        query = query.order_by(func.sum(Order.total_amount).desc())
-    else:  # order_count
-        query = query.order_by(func.count(Order.id).desc())
-    
-    # 手动分页
-    total_customers = query.count()
-    offset = (page - 1) * per_page
-    customers_data = query.offset(offset).limit(per_page).all()
-    
-    # 计算分页信息
-    total_pages = (total_customers + per_page - 1) // per_page
-    
-    # 获取每个顾客的最后订单时间
-    customer_last_orders = {}
-    for customer_data in customers_data:
-        customer = customer_data[0]
-        last_order = Order.query.filter_by(
-            restaurant_id=restaurant_id,
-            user_id=customer.id
-        ).order_by(Order.created_at.desc()).first()
-        if last_order:
-            customer_last_orders[customer.id] = last_order.created_at
-    
-    # 获取每个顾客的订单状态统计
-    customer_order_stats = {}
-    for customer_data in customers_data:
-        customer = customer_data[0]
-        status_counts = db.session.query(
-            Order.status,
-            func.count(Order.id).label('count')
+    try:
+        # 查询在该餐厅有过订单的所有顾客
+        from sqlalchemy import func
+        
+        # 构建基础查询
+        customers_query = db.session.query(
+            User,
+            func.count(Order.id).label('order_count'),
+            func.sum(Order.total_amount).label('total_spent')
+        ).join(
+            Order, User.id == Order.user_id
         ).filter(
-            Order.restaurant_id == restaurant_id,
-            Order.user_id == customer.id
-        ).group_by(Order.status).all()
+            Order.restaurant_id == restaurant_id
+        ).group_by(
+            User.id
+        )
         
-        # 转换为字典
-        stats_dict = {}
-        for status, count in status_counts:
-            stats_dict[status] = count
+        # 排序
+        if sort_by == 'total_spent':
+            customers_query = customers_query.order_by(func.sum(Order.total_amount).desc())
+        else:  # order_count
+            customers_query = customers_query.order_by(func.count(Order.id).desc())
         
-        customer_order_stats[customer.id] = stats_dict
-    
-    # 查询黑名单
-    blacklist = Blacklist.query.filter_by(restaurant_id=restaurant_id).all()
-    blacklist_user_ids = [entry.user_id for entry in blacklist]
-    
-    # 创建分页对象（手动）
-    class Pagination:
-        def __init__(self, items, page, per_page, total, total_pages):
-            self.items = items
-            self.page = page
-            self.per_page = per_page
-            self.total = total
-            self.pages = total_pages
-            self.has_prev = page > 1
-            self.has_next = page < total_pages
-            self.prev_num = page - 1 if page > 1 else None
-            self.next_num = page + 1 if page < total_pages else None
-            
-        def iter_pages(self, left_edge=2, left_current=2, right_current=2, right_edge=2):
-            """生成页码列表"""
-            last = 0
-            for num in range(1, self.pages + 1):
-                if (num <= left_edge or
-                    (num >= self.page - left_current and num <= self.page + right_current) or
-                    num > self.pages - right_edge):
-                    if last + 1 != num:
-                        yield None
-                    yield num
-                    last = num
-    
-    pagination = Pagination(
-        items=customers_data,
-        page=page,
-        per_page=per_page,
-        total=total_customers,
-        total_pages=total_pages
-    )
-    
-    return render_template('restaurant/customers.html',
-                         title='顾客管理',
-                         restaurant=restaurant,
-                         customers=pagination,
-                         sort_by=sort_by,
-                         customer_last_orders=customer_last_orders,
-                         customer_order_stats=customer_order_stats,
-                         blacklist_user_ids=blacklist_user_ids)
+        # 分页
+        customers = customers_query.paginate(page=page, per_page=20, error_out=False)
+        
+        # 获取每个顾客的最后订单时间
+        customer_last_orders = {}
+        for customer_data in customers.items:
+            if customer_data and customer_data[0]:
+                customer = customer_data[0]
+                last_order = Order.query.filter_by(
+                    restaurant_id=restaurant_id,
+                    user_id=customer.id
+                ).order_by(Order.created_at.desc()).first()
+                if last_order:
+                    customer_last_orders[customer.id] = last_order.created_at
+        
+        # 获取每个顾客的订单状态统计
+        customer_order_stats = {}
+        for customer_data in customers.items:
+            if customer_data and customer_data[0]:
+                customer = customer_data[0]
+                # 查询该顾客在该餐厅的订单状态统计
+                status_counts = db.session.query(
+                    Order.status,
+                    func.count(Order.id).label('count')
+                ).filter(
+                    Order.restaurant_id == restaurant_id,
+                    Order.user_id == customer.id
+                ).group_by(Order.status).all()
+                
+                # 转换为字典
+                stats_dict = {}
+                for status, count in status_counts:
+                    stats_dict[status] = count
+                
+                customer_order_stats[customer.id] = stats_dict
+        
+        # 查询黑名单
+        blacklist = Blacklist.query.filter_by(restaurant_id=restaurant_id).all()
+        blacklist_user_ids = [entry.user_id for entry in blacklist]
+        
+        return render_template('restaurant/customers.html',
+                             title='顾客管理',
+                             restaurant=restaurant,
+                             customers=customers,
+                             sort_by=sort_by,
+                             customer_last_orders=customer_last_orders,
+                             customer_order_stats=customer_order_stats,
+                             blacklist_user_ids=blacklist_user_ids)
+                             
+    except Exception as e:
+        # 如果发生错误，返回一个简单的页面
+        import traceback
+        print(f"顾客管理页面错误: {e}")
+        print(traceback.format_exc())
+        
+        return render_template('restaurant/customers.html',
+                             title='顾客管理',
+                             restaurant=restaurant,
+                             customers=None,
+                             sort_by=sort_by,
+                             customer_last_orders={},
+                             customer_order_stats={},
+                             blacklist_user_ids=[])
 
 @restaurant_bp.route('/<int:restaurant_id>/customers/<int:customer_id>')
 @login_required

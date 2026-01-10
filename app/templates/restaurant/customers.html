@@ -4,7 +4,13 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>顾客管理</h2>
     <div>
-        <span class="badge bg-secondary">{{ customers.total }} 位顾客</span>
+        <span class="badge bg-secondary">
+            {% if customers and customers.total is defined %}
+                {{ customers.total }} 位顾客
+            {% else %}
+                0 位顾客
+            {% endif %}
+        </span>
     </div>
 </div>
 
@@ -28,7 +34,7 @@
 <!-- 顾客列表 -->
 <div class="card">
     <div class="card-body">
-        {% if customers.items %}
+        {% if customers and customers.items %}
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
@@ -43,20 +49,23 @@
                 </thead>
                 <tbody>
                     {% for customer_data in customers.items %}
+                    {% if customer_data and customer_data[0] %}
                     {% set customer = customer_data[0] %}
-                    {% set order_count = customer_data[1] %}
-                    {% set total_spent = customer_data[2] %}
-                    {% set last_order_date = customer_last_orders.get(customer.id) %}
-                    {% set status_stats = customer_order_stats.get(customer.id, {}) %}
+                    {% set order_count = customer_data[1] if customer_data[1] is defined else 0 %}
+                    {% set total_spent = customer_data[2] if customer_data[2] is defined else 0 %}
+                    {% set last_order_date = customer_last_orders.get(customer.id) if customer_last_orders is defined else None %}
+                    {% set status_stats = customer_order_stats.get(customer.id, {}) if customer_order_stats is defined else {} %}
                     <tr>
                         <td>
                             <div class="d-flex align-items-center">
-                                <img src="{{ url_for('static', filename='uploads/avatars/' + customer.avatar_path) }}" 
-                                     alt="头像" class="rounded-circle me-2" width="40" height="40">
+                                {% set avatar_path = customer.avatar_path if customer.avatar_path else 'default_avatar.png' %}
+                                <img src="{{ url_for('static', filename='uploads/avatars/' + avatar_path) }}" 
+                                     alt="头像" class="rounded-circle me-2" width="40" height="40"
+                                     onerror="this.onerror=null; this.src='{{ url_for('static', filename='uploads/avatars/default_avatar.png') }}';">
                                 <div>
                                     <strong>{{ customer.username }}</strong>
                                     <div class="text-muted small">{{ customer.email }}</div>
-                                    {% if customer.id in blacklist_user_ids %}
+                                    {% if blacklist_user_ids is defined and customer.id in blacklist_user_ids %}
                                     <span class="badge bg-danger mt-1">黑名单</span>
                                     {% endif %}
                                 </div>
@@ -104,30 +113,33 @@
                                class="btn btn-sm btn-outline-info mb-1">
                                 <i class="bi bi-eye"></i> 详情
                             </a>
-                            {% if customer.id in blacklist_user_ids %}
-                            <form action="{{ url_for('restaurant.remove_from_blacklist', restaurant_id=restaurant.id) }}" 
-                                  method="POST" class="d-inline">
-                                <input type="hidden" name="user_id" value="{{ customer.id }}">
-                                <button type="submit" class="btn btn-sm btn-outline-success mb-1">
-                                    <i class="bi bi-person-check"></i> 移出黑名单
+                            {% if blacklist_user_ids is defined %}
+                                {% if customer.id in blacklist_user_ids %}
+                                <form action="{{ url_for('restaurant.remove_from_blacklist', restaurant_id=restaurant.id) }}" 
+                                      method="POST" class="d-inline">
+                                    <input type="hidden" name="user_id" value="{{ customer.id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-success mb-1">
+                                        <i class="bi bi-person-check"></i> 移出黑名单
+                                    </button>
+                                </form>
+                                {% else %}
+                                <button type="button" class="btn btn-sm btn-outline-warning mb-1 add-to-blacklist" 
+                                        data-user-id="{{ customer.id }}" 
+                                        data-username="{{ customer.username }}">
+                                    <i class="bi bi-person-x"></i> 加入黑名单
                                 </button>
-                            </form>
-                            {% else %}
-                            <button type="button" class="btn btn-sm btn-outline-warning mb-1 add-to-blacklist" 
-                                    data-user-id="{{ customer.id }}" 
-                                    data-username="{{ customer.username }}">
-                                <i class="bi bi-person-x"></i> 加入黑名单
-                            </button>
+                                {% endif %}
                             {% endif %}
                         </td>
                     </tr>
+                    {% endif %}
                     {% endfor %}
                 </tbody>
             </table>
         </div>
         
         <!-- 分页 -->
-        {% if customers.pages > 1 %}
+        {% if customers and customers.pages > 1 %}
         <nav aria-label="顾客分页" class="mt-4">
             <ul class="pagination justify-content-center">
                 {% if customers.has_prev %}
@@ -195,7 +207,13 @@
     <div class="col-md-4">
         <div class="card text-center">
             <div class="card-body">
-                <h2 class="text-primary">{{ customers.total }}</h2>
+                <h2 class="text-primary">
+                    {% if customers and customers.total is defined %}
+                        {{ customers.total }}
+                    {% else %}
+                        0
+                    {% endif %}
+                </h2>
                 <p class="text-muted mb-0">总顾客数</p>
             </div>
         </div>
@@ -204,10 +222,14 @@
         <div class="card text-center">
             <div class="card-body">
                 {% set total_orders = 0 %}
-                {% for customer_data in customers.items %}
-                {% set order_count = customer_data[1] %}
-                {% set total_orders = total_orders + order_count %}
-                {% endfor %}
+                {% if customers and customers.items %}
+                    {% for customer_data in customers.items %}
+                        {% if customer_data and customer_data[1] is defined %}
+                            {% set order_count = customer_data[1] %}
+                            {% set total_orders = total_orders + order_count %}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
                 <h2 class="text-success">{{ total_orders }}</h2>
                 <p class="text-muted mb-0">总订单数</p>
             </div>
@@ -217,11 +239,16 @@
         <div class="card text-center">
             <div class="card-body">
                 {% set total_spent_sum = 0 %}
-                {% for customer_data in customers.items %}
-                {% set total_spent = customer_data[2] %}
-                {% set total_spent_sum = total_spent_sum + total_spent %}
-                {% endfor %}
-                {% set avg_spent = total_spent_sum / customers.total if customers.total > 0 else 0 %}
+                {% if customers and customers.items %}
+                    {% for customer_data in customers.items %}
+                        {% if customer_data and customer_data[2] is defined %}
+                            {% set total_spent = customer_data[2] %}
+                            {% set total_spent_sum = total_spent_sum + total_spent %}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% set customer_count = customers.total if customers and customers.total is defined else 1 %}
+                {% set avg_spent = total_spent_sum / customer_count if customer_count > 0 else 0 %}
                 <h2 class="text-warning">¥{{ "%.2f"|format(avg_spent) }}</h2>
                 <p class="text-muted mb-0">客单价</p>
             </div>
@@ -279,6 +306,18 @@ document.addEventListener('DOMContentLoaded', function() {
             blacklistUsername.textContent = username;
             
             blacklistModal.show();
+        });
+    });
+    
+    // 为顾客行添加点击效果
+    const customerRows = document.querySelectorAll('tbody tr');
+    customerRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f8f9fa';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
         });
     });
 });
