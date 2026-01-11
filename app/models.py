@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db, login_manager
@@ -237,6 +237,21 @@ class Order(db.Model):
     
     def __repr__(self):
         return f'<Order {self.id}>'
+    
+    # 添加本地时间属性（北京时间 UTC+8）
+    @property
+    def local_created_at(self):
+        """返回本地时间（北京时间，UTC+8）"""
+        if self.created_at:
+            return self.created_at + timedelta(hours=8)
+        return None
+    
+    @property
+    def local_paid_at(self):
+        """返回本地支付时间（北京时间，UTC+8）"""
+        if self.paid_at:
+            return self.paid_at + timedelta(hours=8)
+        return None
 
 class OrderItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -80,7 +80,13 @@
                             <span class="badge bg-danger">已取消</span>
                             {% endif %}
                         </td>
-                        <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if order.local_created_at %}
+                                {{ order.local_created_at.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                {{ order.created_at.strftime('%Y-%m-%d %H:%M') }}
+                            {% endif %}
+                        </td>
                         <td>
                             <a href="{{ url_for('restaurant.order_detail', restaurant_id=restaurant.id, order_id=order.id) }}" 
                                class="btn btn-sm btn-outline-info">

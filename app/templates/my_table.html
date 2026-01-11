@@ -563,12 +563,15 @@ document.addEventListener('DOMContentLoaded', function() {
         this.disabled = true;
         this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 处理中...';
         
-        // 发送结算请求
+        // 发送结算请求，包含备注
         fetch('{{ url_for("main.checkout") }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            body: JSON.stringify({
+                remarks: remarks
+            })
         })
         .then(response => response.json())
         .then(data => {

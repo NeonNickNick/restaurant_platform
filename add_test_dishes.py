@@ -25,7 +25,7 @@ with app.app_context():
         print('❌ 找不到分类')
         print('  尝试创建默认分类...')
         # 创建默认分类
-        default_categories = ['特色饮品', '菜品', '主食', '其他']
+        default_categories = ['饮品', '菜品', '主食', '其他']
         for cat_name in default_categories:
             category = Category(name=cat_name, restaurant_id=restaurant.id)
             db.session.add(category)
@@ -38,11 +38,11 @@ with app.app_context():
     
     # 批量添加菜品
     test_dishes = [
-        {'name': '卡布奇诺', 'category': '特色饮品', 'price': 26.0, 'desc': '奶泡丰富，咖啡与牛奶的完美结合'},
-        {'name': '摩卡', 'category': '特色饮品', 'price': 30.0, 'desc': '巧克力与咖啡的绝妙搭配'},
-        {'name': '美式咖啡', 'category': '特色饮品', 'price': 22.0, 'desc': '简单纯粹的美式风味'},
-        {'name': '水果茶', 'category': '特色饮品', 'price': 25.0, 'desc': '多种新鲜水果调制'},
-        {'name': '柠檬红茶', 'category': '特色饮品', 'price': 20.0, 'desc': '清爽解渴'},
+        {'name': '卡布奇诺', 'category': '饮品', 'price': 26.0, 'desc': '奶泡丰富，咖啡与牛奶的完美结合'},
+        {'name': '摩卡', 'category': '饮品', 'price': 30.0, 'desc': '巧克力与咖啡的绝妙搭配'},
+        {'name': '美式咖啡', 'category': '饮品', 'price': 22.0, 'desc': '简单纯粹的美式风味'},
+        {'name': '水果茶', 'category': '饮品', 'price': 25.0, 'desc': '多种新鲜水果调制'},
+        {'name': '柠檬红茶', 'category': '饮品', 'price': 20.0, 'desc': '清爽解渴'},
         {'name': '芝士蛋糕', 'category': '其他', 'price': 35.0, 'desc': '口感细腻，芝士浓郁'},
         {'name': '巧克力布朗尼', 'category': '其他', 'price': 32.0, 'desc': '巧克力爱好者的最爱'},
         {'name': '薯条', 'category': '其他', 'price': 18.0, 'desc': '金黄酥脆'},

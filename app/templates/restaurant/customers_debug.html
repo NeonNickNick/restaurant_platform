@@ -8,6 +8,26 @@
     </div>
 </div>
 
+<!-- 调试信息 -->
+<div class="alert alert-info">
+    <h5>调试信息</h5>
+    <p>顾客总数: {{ customers.total }}</p>
+    <p>当前页项目数: {{ customers.items|length }}</p>
+    
+    {% if customers.items %}
+    <p>查询到的顾客:</p>
+    <ul>
+    {% for customer_data in customers.items %}
+        {% if customer_data and customer_data[0] %}
+        <li>{{ customer_data[0].username }} - 订单数: {{ customer_data[1] }} - 消费额: {{ customer_data[2] }}</li>
+        {% endif %}
+    {% endfor %}
+    </ul>
+    {% else %}
+    <p>没有查询到顾客</p>
+    {% endif %}
+</div>
+
 <!-- 排序筛选 -->
 <div class="card mb-4">
     <div class="card-body">
@@ -72,10 +92,10 @@
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{{ url_for('restaurant.customer_detail', restaurant_id=restaurant.id, customer_id=customer.id) }}" 
-                               class="btn btn-sm btn-outline-info">
+                            <!-- 临时禁用详情链接，避免错误 -->
+                            <button class="btn btn-sm btn-outline-info" disabled>
                                 <i class="bi bi-eye"></i> 详情
-                            </a>
+                            </button>
                         </td>
                     </tr>
                     {% endif %}

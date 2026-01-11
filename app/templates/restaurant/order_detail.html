@@ -37,12 +37,37 @@
                             </tr>
                             <tr>
                                 <th>下单时间</th>
-                                <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                <td>
+                                    {% if order.local_created_at %}
+                                        {{ order.local_created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                    {% else %}
+                                        {{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <!-- 新增：订单备注 -->
+                            <tr>
+                                <th>订单备注</th>
+                                <td>
+                                    {% if order.remarks and order.remarks|trim %}
+                                        <div class="alert alert-info p-2 mb-0">
+                                            {{ order.remarks }}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">无备注</span>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% if order.paid_at %}
                             <tr>
                                 <th>支付时间</th>
-                                <td>{{ order.paid_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                <td>
+                                    {% if order.local_paid_at %}
+                                        {{ order.local_paid_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                    {% else %}
+                                        {{ order.paid_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% endif %}
                         </table>
@@ -168,13 +193,19 @@
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item d-flex justify-content-between">
                         <span>订单创建</span>
-                        <small class="text-muted">{{ order.created_at.strftime('%m-%d %H:%M') }}</small>
+                        <small class="text-muted">
+                            {% if order.local_created_at %}
+                                {{ order.local_created_at.strftime('%m-%d %H:%M') }}
+                            {% else %}
+                                {{ order.created_at.strftime('%m-%d %H:%M') }}
+                            {% endif %}
+                        </small>
                     </li>
                     {% if order.status in ['paid', 'completed'] %}
                     <li class="list-group-item d-flex justify-content-between">
                         <span>支付完成</span>
-                        {% if order.paid_at %}
-                        <small class="text-muted">{{ order.paid_at.strftime('%m-%d %H:%M') }}</small>
+                        {% if order.local_paid_at %}
+                        <small class="text-muted">{{ order.local_paid_at.strftime('%m-%d %H:%M') }}</small>
                         {% else %}
                         <small class="text-muted">-</small>
                         {% endif %}

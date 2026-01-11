@@ -520,7 +520,7 @@ def edit_dish(restaurant_id, dish_id):
 @login_required
 @restaurant_owner_required
 def delete_dish(restaurant_id, dish_id):
-    """删除菜品"""
+    """删除菜品及相关订单，并更新其他菜品的被点次数"""
     dish = Dish.query.get_or_404(dish_id)
     
     # 验证菜品属于该餐厅
@@ -528,15 +528,74 @@ def delete_dish(restaurant_id, dish_id):
         abort(404)
     
     try:
-        # 删除菜品图片（如果不是默认图片）
+        # 1. 查找所有包含该菜品的订单
+        from sqlalchemy import distinct
+        orders_to_delete = []
+        order_ids = []
+        
+        # 查询所有包含该菜品的订单ID
+        order_ids_query = db.session.query(distinct(OrderItem.order_id)).filter(
+            OrderItem.dish_id == dish_id
+        ).all()
+        order_ids = [order_id[0] for order_id in order_ids_query]
+        
+        if order_ids:
+            # 获取这些订单的详细信息
+            orders_to_delete = Order.query.filter(Order.id.in_(order_ids)).all()
+            
+            # 2. 计算需要从餐厅总销售额中减去的金额
+            total_to_subtract = 0.0
+            orders_deleted = 0
+            updated_dish_count = 0  # 记录更新了多少个其他菜品
+            
+            for order in orders_to_delete:
+                # 只统计已支付和已完成的订单
+                if order.status in ['paid', 'completed']:
+                    total_to_subtract += order.total_amount
+                
+                # 3. 更新订单中其他菜品的被点次数
+                for order_item in order.items:
+                    if order_item.dish_id != dish_id:  # 如果是其他菜品
+                        other_dish = Dish.query.get(order_item.dish_id)
+                        if other_dish:
+                            # 减去这个订单中该菜品的数量
+                            other_dish.order_count = max(0, (other_dish.order_count or 0) - order_item.quantity)
+                            updated_dish_count += 1
+                            print(f"更新菜品 #{other_dish.id} '{other_dish.name}' 的被点次数: -{order_item.quantity}")
+                
+                # 4. 删除订单项
+                OrderItem.query.filter_by(order_id=order.id).delete()
+                
+                # 5. 删除订单
+                db.session.delete(order)
+                orders_deleted += 1
+            
+            # 6. 更新餐厅总销售额
+            restaurant = Restaurant.query.get(restaurant_id)
+            if restaurant and total_to_subtract > 0:
+                restaurant.total_sales = max(0, restaurant.total_sales - total_to_subtract)
+            
+            flash_message = f'菜品"{dish.name}"及{orders_deleted}个相关订单已成功删除！'
+            if total_to_subtract > 0:
+                flash_message += f' 已从餐厅销售额中减去¥{total_to_subtract:.2f}'
+            if updated_dish_count > 0:
+                flash_message += f' 已更新{updated_dish_count}个其他菜品的被点次数'
+        
+        # 7. 删除菜品图片（如果不是默认图片）
         if dish.image_path and dish.image_path != 'default_dish.png':
             image_path = os.path.join(current_app.config['DISH_UPLOAD_FOLDER'], dish.image_path)
             if os.path.exists(image_path):
                 os.remove(image_path)
         
+        # 8. 删除菜品
         db.session.delete(dish)
         db.session.commit()
-        flash('菜品删除成功！', 'success')
+        
+        if order_ids:
+            flash(flash_message, 'success')
+        else:
+            flash(f'菜品"{dish.name}"删除成功！', 'success')
+        
     except Exception as e:
         db.session.rollback()
         flash(f'删除失败：{str(e)}', 'danger')
@@ -672,11 +731,17 @@ def customers(restaurant_id):
     sort_by = request.args.get('sort_by', 'total_spent')
     page = request.args.get('page', 1, type=int)
     
+    print(f"=== 顾客管理页面调试 ===")
+    print(f"餐厅ID: {restaurant_id}")
+    print(f"餐厅名称: {restaurant.name}")
+    print(f"当前页: {page}")
+    print(f"排序方式: {sort_by}")
+    
     try:
         # 查询在该餐厅有过订单的所有顾客
         from sqlalchemy import func
         
-        # 构建基础查询
+        # 构建基础查询 - 只统计已支付和已完成的订单
         customers_query = db.session.query(
             User,
             func.count(Order.id).label('order_count'),
@@ -684,10 +749,31 @@ def customers(restaurant_id):
         ).join(
             Order, User.id == Order.user_id
         ).filter(
-            Order.restaurant_id == restaurant_id
+            Order.restaurant_id == restaurant_id,
+            Order.status.in_(['paid', 'completed'])
         ).group_by(
             User.id
         )
+        
+        # 调试：打印查询条件
+        print(f"查询条件: restaurant_id={restaurant_id}, status in ['paid', 'completed']")
+        
+        # 调试：检查有多少符合条件的订单
+        order_count = Order.query.filter(
+            Order.restaurant_id == restaurant_id,
+            Order.status.in_(['paid', 'completed'])
+        ).count()
+        print(f"符合条件的订单数: {order_count}")
+        
+        # 调试：列出所有符合条件的订单
+        orders = Order.query.filter(
+            Order.restaurant_id == restaurant_id,
+            Order.status.in_(['paid', 'completed'])
+        ).all()
+        print(f"符合条件的订单详情:")
+        for order in orders:
+            customer = User.query.get(order.user_id)
+            print(f"  订单#{order.id}: 顾客={customer.username if customer else '未知'}, 状态={order.status}, 金额={order.total_amount}")
         
         # 排序
         if sort_by == 'total_spent':
@@ -698,14 +784,23 @@ def customers(restaurant_id):
         # 分页
         customers = customers_query.paginate(page=page, per_page=20, error_out=False)
         
+        print(f"分组查询结果: {customers.total} 位顾客")
+        print(f"当前页项目数: {len(customers.items)}")
+        
+        # 打印查询到的顾客详情
+        for i, customer_data in enumerate(customers.items):
+            if customer_data and customer_data[0]:
+                print(f"  顾客{i+1}: {customer_data[0].username}, 订单数: {customer_data[1]}, 消费额: {customer_data[2]}")
+        
         # 获取每个顾客的最后订单时间
         customer_last_orders = {}
         for customer_data in customers.items:
             if customer_data and customer_data[0]:
                 customer = customer_data[0]
-                last_order = Order.query.filter_by(
-                    restaurant_id=restaurant_id,
-                    user_id=customer.id
+                last_order = Order.query.filter(
+                    Order.restaurant_id == restaurant_id,
+                    Order.user_id == customer.id,
+                    Order.status.in_(['paid', 'completed'])
                 ).order_by(Order.created_at.desc()).first()
                 if last_order:
                     customer_last_orders[customer.id] = last_order.created_at
@@ -715,7 +810,6 @@ def customers(restaurant_id):
         for customer_data in customers.items:
             if customer_data and customer_data[0]:
                 customer = customer_data[0]
-                # 查询该顾客在该餐厅的订单状态统计
                 status_counts = db.session.query(
                     Order.status,
                     func.count(Order.id).label('count')
@@ -724,7 +818,6 @@ def customers(restaurant_id):
                     Order.user_id == customer.id
                 ).group_by(Order.status).all()
                 
-                # 转换为字典
                 stats_dict = {}
                 for status, count in status_counts:
                     stats_dict[status] = count
@@ -735,6 +828,9 @@ def customers(restaurant_id):
         blacklist = Blacklist.query.filter_by(restaurant_id=restaurant_id).all()
         blacklist_user_ids = [entry.user_id for entry in blacklist]
         
+        print(f"=== 调试结束 ===")
+        
+        # 使用调试模板
         return render_template('restaurant/customers.html',
                              title='顾客管理',
                              restaurant=restaurant,
@@ -745,20 +841,36 @@ def customers(restaurant_id):
                              blacklist_user_ids=blacklist_user_ids)
                              
     except Exception as e:
-        # 如果发生错误，返回一个简单的页面
         import traceback
         print(f"顾客管理页面错误: {e}")
         print(traceback.format_exc())
         
+        # 创建一个简单的分页对象
+        class SimplePagination:
+            def __init__(self):
+                self.items = []
+                self.page = 1
+                self.per_page = 20
+                self.total = 0
+                self.pages = 0
+                self.has_prev = False
+                self.has_next = False
+                self.prev_num = None
+                self.next_num = None
+                
+            def iter_pages(self, left_edge=1, right_edge=1, left_current=2, right_current=2):
+                return []
+        
+        empty_pagination = SimplePagination()
+        
         return render_template('restaurant/customers.html',
                              title='顾客管理',
                              restaurant=restaurant,
-                             customers=None,
+                             customers=empty_pagination,
                              sort_by=sort_by,
                              customer_last_orders={},
                              customer_order_stats={},
                              blacklist_user_ids=[])
-
 @restaurant_bp.route('/<int:restaurant_id>/customers/<int:customer_id>')
 @login_required
 @restaurant_owner_required
@@ -828,7 +940,6 @@ def customer_detail(restaurant_id, customer_id):
                          dish_stats=dish_stats,
                          is_blacklisted=is_blacklisted,
                          blacklist_record=blacklist_record)
-
 # ================= 数据报表功能 =================
 
 @restaurant_bp.route('/<int:restaurant_id>/reports', methods=['GET', 'POST'])

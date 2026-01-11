@@ -55,6 +55,16 @@ def restaurant_menu(restaurant_id):
     """餐厅菜单页面"""
     restaurant = Restaurant.query.get_or_404(restaurant_id)
     
+    # 新增：检查用户是否在该餐厅的黑名单中
+    blacklist_record = Blacklist.query.filter_by(
+        restaurant_id=restaurant_id,
+        user_id=current_user.id
+    ).first()
+    
+    if blacklist_record:
+        flash(f'您已被该餐厅加入黑名单，无法查看菜单。原因：{blacklist_record.reason or "无具体原因"}', 'danger')
+        return redirect(url_for('main.restaurants'))
+    
     # 获取所有分类
     categories = Category.query.filter_by(restaurant_id=restaurant_id).all()
     
@@ -301,6 +311,8 @@ def generate_customer_fallback_answer(question, dish):
 @login_required
 def checkout():
     """结算下单"""
+    # 获取前端发送的JSON数据
+    data = request.get_json(silent=True) or {}
     cart = session.get('cart', {})
     
     if not cart:
@@ -316,13 +328,29 @@ def checkout():
     
     restaurant_id = list(restaurant_ids)[0]
     
+    # 获取备注
+    remarks = data.get('remarks', '').strip()
+    
+    # 新增：检查用户是否在该餐厅的黑名单中
+    blacklist_record = Blacklist.query.filter_by(
+        restaurant_id=restaurant_id,
+        user_id=current_user.id
+    ).first()
+    
+    if blacklist_record:
+        return jsonify({
+            'success': False, 
+            'message': f'您已被该餐厅加入黑名单，无法下单。原因：{blacklist_record.reason or "无具体原因"}'
+        }), 403
+    
     try:
-        # 创建订单
+        # 创建订单，包含备注
         order = Order(
             user_id=current_user.id,
             restaurant_id=restaurant_id,
             status='paid',
-            total_amount=0.0
+            total_amount=0.0,
+            remarks=remarks  # 添加备注
         )
         db.session.add(order)
         db.session.flush()  # 获取order.id

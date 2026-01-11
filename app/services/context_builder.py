@@ -834,12 +834,20 @@ class ContextBuilder:
                 order_time = getattr(order, 'created_at', '未知时间')
                 order_status = getattr(order, 'status', '未知')
                 order_total = ContextBuilder._safe_float(getattr(order, 'total_amount', 0))
+
+                 # 订单备注 - 新增代码
+                order_remarks = getattr(order, 'remarks', '')
+                if order_remarks:
+                    remarks_info = f"备注: {order_remarks}"
+                else:
+                    remarks_info = "备注: 无"
                 
                 context += f"订单ID: {order_id}\n"
                 context += f"顾客: {customer_info}\n"
                 context += f"时间: {order_time}\n"
                 context += f"状态: {order_status}\n"
                 context += f"金额: ¥{order_total:.2f}\n"
+                context += f"{remarks_info}\n"  # 添加备注信息
                 
                 # 订单项
                 order_items = OrderItem.query.filter_by(order_id=order_id).all()
